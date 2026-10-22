@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String          @id @default(cuid())
+  email           String?         @unique
+  name            String?
+  nationality     String?         @default("India")
+  japanese_level  String?         @default("none")
+  languages       Json?           @default("[\"en\",\"hi\"]")
+  city            String?         @default("Tokyo")
+  insurance_type  String?         @default("National Health Insurance")
+  constraints     Json?           @default("[]")
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  visitPlans      VisitPlan[]
+  medicalRecords  MedicalRecord[]
+}
+
+model Clinic {
+  id                   String      @id @default(cuid())
+  sourceId             String?     @unique
+  name_ja              String
+  name_en              String?
+  type                 String      @default("clinic") // "hospital", "clinic", "dental"
+  prefecture           String?     @default("Tokyo")
+  ward                 String?
+  address              String
+  specialties          Json        @default("[]")     // e.g. ["Internal Medicine", "Pediatrics"]
+  departments          Json        @default("[]")     // Japanese names such as 内科 and 皮膚科
+  phone                String?
+  website              String?
+  lat                  Float?
+  lng                  Float?
+  latitude             Float?
+  longitude            Float?
+  insurance_accepted   Boolean     @default(true)
+  languages_supported  Json        @default("[\"ja\"]") // e.g. ["en", "hi", "ja"]
+  opening_hours        Json?                          // opening hours schedule
+  consultation_hours   Json?                          // MHLW consultation hours schedule
+  how_to_book          String?     @default("Walk-in or Phone") // "walk-in", "phone", "web"
+  foreign_friendly_notes String?
+  source               String      @default("Tokyo_OpenData") // "MHLW", "Tokyo_OpenData", "OSM"
+  sourceSnapshotDate   String?
+  raw_data             Json?
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  visitPlans           VisitPlan[]
+
+  @@index([sourceId])
+  @@index([prefecture])
+  @@index([ward])
+  @@index([lat, lng])
+  @@index([type])
+}
+
+model VisitPlan {
+  id                   String      @id @default(cuid())
+  userId               String?
+  clinicId             String?
+  symptom_summary_ja   String
+  symptom_summary_en   String
+  symptom_summary_hi   String
+  visit_steps          Json        // array of steps: what to bring, reception, consult, payment
+  cost_estimate        Json        // breakdown of points, 30% copay, medication estimate
+  createdAt            DateTime    @default(now())
+
+  user                 User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  clinic               Clinic?     @relation(fields: [clinicId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([clinicId])
+}
+
+model MedicalRecord {
+  id              String          @id @default(cuid())
+  userId          String?
+  type            String          // "bill" or "prescription"
+  input_text      Json            // raw line items or prescription medicine list
+  explanation_en  String
+  explanation_hi  String
+  createdAt       DateTime        @default(now())
+
+  user            User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+}

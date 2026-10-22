@@ -1,0 +1,388 @@
+[
+  {
+    "id": "clinic-st-lukes",
+    "name_ja": "聖路加国際病院",
+    "name_en": "St. Luke's International Hospital",
+    "type": "hospital",
+    "specialties": ["General Internal Medicine", "Cardiology", "Pediatrics", "Emergency Medicine", "Obstetrics & Gynecology", "Orthopedics", "Dermatology"],
+    "address": "〒104-8560 東京都中央区明石町9-1",
+    "phone": "03-3541-5151",
+    "website": "http://hospital.luke.ac.jp/eng/",
+    "lat": 35.6668,
+    "lng": 139.7745,
+    "insurance_accepted": true,
+    "languages_supported": ["en", "ja", "hi"],
+    "opening_hours": {
+      "weekdays": "08:30 - 17:00 (Reception until 11:00 for first visit)",
+      "saturday": "Emergency Only / By Appointment",
+      "sunday": "Closed (Emergency 24/7)"
+    },
+    "how_to_book": "Appointment recommended by phone or web referral; 24/7 ER available",
+    "foreign_friendly_notes": "JCI Accredited. Full international patient service desk. English-fluent physicians and nurses. Multilingual medical questionnaires available. Hindi coordination upon advance request.",
+    "source": "MHLW_Tokyo_Himawari",
+    "raw_data": {
+      "mhlw_code": "1310200001",
+      "beds": 520,
+      "emergency_level": "Tertiary Critical Care Center"
+    }
+  },
+  {
+    "id": "clinic-ncgm",
+    "name_ja": "国立国際医療研究センター病院",
+    "name_en": "National Center for Global Health and Medicine (NCGM)",
+    "type": "hospital",
+    "specialties": ["Infectious Diseases", "Internal Medicine", "Travel Medicine", "Pediatrics", "Surgery", "Emergency Medicine"],
+    "address": "〒162-8655 東京都新宿区戸山1-21-1",
+    "phone": "03-3202-7181",
+    "website": "http://hospital.ncgm.go.jp/en/",
+    "lat": 35.7001,
+    "lng": 139.7153,
+    "insurance_accepted": true,
+    "languages_supported": ["en", "hi", "ja"],
+    "opening_hours": {
+      "weekdays": "08:30 - 17:15",
+      "saturday": "Closed (Emergency 24/7)",
+      "sunday": "Closed (Emergency 24/7)"
+    },
+    "how_to_book": "Referral letter preferred, walk-in accepted with Sentei Ryouyouhi fee; 24/7 ER",
+    "foreign_friendly_notes": "Designated Center of Excellence for International Patients (JMIP certified). Comprehensive English medical intake, professional medical interpreters for English and South Asian languages.",
+    "source": "MHLW_OpenData",
+    "raw_data": {
+      "mhlw_code": "1310400012",
+      "emergency_designated": true
+    }
+  },
+  {
+    "id": "clinic-nishikasai-med",
+    "name_ja": "西葛西メディカルクリニック",
+    "name_en": "Nishi-Kasai Medical Clinic",
+    "type": "clinic",
+    "specialties": ["Internal Medicine", "Pediatrics", "Cardiology", "Allergy"],
+    "address": "〒134-0088 東京都江戸川区西葛西6-15-3 中兼ビル2F",
+    "phone": "03-5676-5777",
+    "website": "https://www.nishikasai-med.jp/",
+    "lat": 35.6635,
+    "lng": 139.8598,
+    "insurance_accepted": true,
+    "languages_supported": ["en", "hi", "ja"],
+    "opening_hours": {
+      "weekdays": "09:00 - 12:30, 15:00 - 18:30 (Thu afternoon closed)",
+      "saturday": "09:00 - 13:00",
+      "sunday": "Closed"
+    },
+    "how_to_book": "Walk-in welcome, online reservation available",
+    "foreign_friendly_notes": "Located in Nishi-Kasai (Tokyo's primary Indian community hub). Staff and physician accustomed to Indian resident patients, dietary preferences (vegetarianism), and English medical questionnaires.",
+    "source": "Tokyo_OpenData_Edogawa",
+    "raw_data": {
+      "ward": "Edogawa-ku",
+      "station": "Nishi-Kasai (Tozai Line)"
+    }
+  },
+  {
+    "id": "clinic-kasai-central",
+    "name_ja": "葛西中央病院",
+    "name_en": "Kasai Central Hospital",
+    "type": "hospital",
+    "specialties": ["Internal Medicine", "Surgery", "Orthopedics", "Rehabilitation", "Emergency Care"],
+    "address": "〒134-0081 東京都江戸川区北葛西1-2-1",
+    "phone": "03-3688-6611",
+    "website": "http://www.kasaichuo.com/",
+    "lat": 35.6748,
+    "lng": 139.8631,
+    "insurance_accepted": true,
+    "languages_supported": ["en", "ja"],
+    "opening_hours": {
+      "weekdays": "09:00 - 12:30, 14:00 - 17:30",
+      "saturday": "09:00 - 12:30",
+      "sunday": "Emergency triage available"
+    },
+    "how_to_book": "Walk-in registration during reception hours; phone inquiries accepted",
+    "foreign_friendly_notes": "Secondary emergency hospital serving the Edogawa area. English intake forms, accepts NHI (Kokumin Kenko Hoken) and Social Insurance.",
+    "source": "Tokyo_Himawari_OpenData",
+    "raw_data": {
+      "ward": "Edogawa-ku",
+      "emergency_grade": 2
+    }
+  },
+  {
+    "id": "clinic-moriyama-memorial",
+    "name_ja": "森山記念病院",
+    "name_en": "Moriyama Memorial Hospital",
+    "type": "hospital",
+    "specialties": ["Neurosurgery", "Cardiovascular", "Internal Medicine", "Emergency Care"],
+    "address": "〒134-0081 東京都江戸川区北葛西4-3-1",
+    "phone": "03-5679-1211",
+    "website": "http://www.moriyama.or.jp/",
+    "lat": 35.6811,
+    "lng": 139.8614,
+    "insurance_accepted": true,
+    "languages_supported": ["en", "ja"],
+    "opening_hours": {
+      "weekdays": "08:30 - 12:00, 13:00 - 17:00",
+      "saturday": "08:30 - 12:00",
+      "sunday": "Emergency 24/7"
+    },
+    "how_to_book": "Reception desk walk-in or emergency hotline",
+    "foreign_friendly_notes": "Major acute and emergency medical center for eastern Tokyo. Modern imaging (CT/MRI), 24/7 acute care with English reception support.",
+    "source": "MHLW_Tokyo",
+    "raw_data": {
+      "beds": 299,
+      "icu": true
+    }
+  },
+  {
+    "id": "clinic-clover-kids",
+    "name_ja": "クローバーこどもクリニック",
+    "name_en": "Clover Children's Clinic Nishi-Kasai",
+    "type": "clinic",
+    "specialties": ["Pediatrics", "Pediatric Allergy", "Vaccinations", "Infant Health Checks"],
+    "address": "〒134-0088 東京都江戸川区西葛西5-1-1 2F",
+    "phone": "03-5676-9608",
+    "website": "https://clover-kodomo.com/",
+    "lat": 35.6652,
+    "lng": 139.8587,
+    "insurance_accepted": true,
+    "languages_supported": ["en", "hi", "ja"],
+    "opening_hours": {
+      "weekdays": "09:00 - 12:30, 15:00 - 18:00 (Wed closed)",
+      "saturday": "09:00 - 13:00",
+      "sunday": "Closed"
+    },
+    "how_to_book": "Web reservation system (smartphone friendly) or phone",
+    "foreign_friendly_notes": "Very popular pediatric clinic among Indian families in Nishi-Kasai. Staff are very friendly to non-Japanese mothers and children, multilingual immunization records guidance.",
+    "source": "Tokyo_OpenData_Edogawa",
+    "raw_data": {
+      "target_age": "0-15 years",
+      "subway": "Nishi-Kasai Station North Exit 1 min"
+    }
+  },
+  {
+    "id": "clinic-iuhw-mita",
+    "name_ja": "国際医療福祉大学 三田病院",
+    "name_en": "IUHW Mita Hospital",
+    "type": "hospital",
+    "specialties": ["Internal Medicine", "Gastroenterology", "Head & Neck Surgery", "Pediatrics", "Orthopedics", "Health Screening"],
+    "address": "〒108-8329 東京都港区三田1-4-3",
+    "phone": "03-3451-8121",
+    "website": "https://mita.iuhw.ac.jp/en/",
+    "lat": 35.6542,
+    "lng": 139.7408,
+    "insurance_accepted": true,
+    "languages_supported": ["en", "ja"],
+    "opening_hours": {
+      "weekdays": "08:30 - 17:00 (Reception 08:30 - 11:30)",
+      "saturday": "08:30 - 12:00",
+      "sunday": "Closed"
+    },
+    "how_to_book": "Phone reservation or international patient services desk",
+    "foreign_friendly_notes": "Accredited by JCI. Dedicated International Healthcare Center. Clear billing with credit card acceptance (Visa, Mastercard, AMEX).",
+    "source": "MHLW_Tokyo_Himawari",
+    "raw_data": {
+      "mhlw_code": "1310300054",
+      "jci_accredited": true
+    }
+  },
+  {
+    "id": "clinic-tokyo-midtown",
+    "name_ja": "東京ミッドタウンクリニック",
+    "name_en": "Tokyo Midtown Clinic",
+    "type": "clinic",
+    "specialties": ["General Internal Medicine", "Cardiology", "Dermatology", "Gynecology", "Orthopedics", "Travel Medicine"],
+    "address": "〒107-6206 東京都港区赤坂9-7-1 ミッドタウン・タワー6F",
+    "phone": "03-5413-7911",
+    "website": "https://www.tokyomidtown-mc.jp/en/",
+    "lat": 35.6657,
+    "lng": 139.7311,
+    "insurance_accepted": true,
+    "languages_supported": ["en", "ja"],
+    "opening_hours": {
+      "weekdays": "09:00 - 13:00, 14:00 - 17:30",
+      "saturday": "Closed",
+      "sunday": "Closed"
+    },
+    "how_to_book": "Online booking and bilingual telephone appointment line",
+    "foreign_friendly_notes": "Premier outpatient clinic tailored for international residents and professionals. English registration, English consultations, and cashless insurance service coordination.",
+    "source": "Tokyo_OpenData_Minato",
+    "raw_data": {
+      "station": "Roppongi Station direct underground access"
+    }
+  },
+  {
+    "id": "clinic-red-cross-hiroo",
+    "name_ja": "日本赤十字社医療センター",
+    "name_en": "Japanese Red Cross Medical Center",
+    "type": "hospital",
+    "specialties": ["Emergency Medicine", "Cardiology", "Neurology", "Obstetrics & Gynecology", "Pediatrics", "Oncology"],
+    "address": "〒150-8935 東京都渋谷区広尾4-1-22",
+    "phone": "03-3400-1311",
+    "website": "https://www.med.jrc.or.jp/en/",
+    "lat": 35.6558,
+    "lng": 139.7186,
+    "insurance_accepted": true,
+    "languages_supported": ["en", "ja"],
+    "opening_hours": {
+      "weekdays": "08:30 - 11:00 (Reception), Emergency 24/7",
+      "saturday": "Closed (Emergency only)",
+      "sunday": "Closed (Emergency only)"
+    },
+    "how_to_book": "Referral letter from local clinic recommended; 24/7 ER available",
+    "foreign_friendly_notes": "Level 3 Emergency and Disaster Base Hospital. English signs and bilingual volunteer guides. Accepts all major Japanese public health insurances.",
+    "source": "MHLW_Tokyo",
+    "raw_data": {
+      "beds": 708,
+      "emergency_level": "Tertiary Critical Care"
+    }
+  },
+  {
+    "id": "clinic-aiiku",
+    "name_ja": "愛育病院",
+    "name_en": "Aiiku Hospital",
+    "type": "hospital",
+    "specialties": ["Obstetrics", "Gynecology", "Pediatrics", "Neonatology", "Internal Medicine"],
+    "address": "〒105-8321 東京都港区芝浦1-16-10",
+    "phone": "03-6453-7300",
+    "website": "http://www.aiiku.net/international/",
+    "lat": 35.6473,
+    "lng": 139.7505,
+    "insurance_accepted": true,
+    "languages_supported": ["en", "ja"],
+    "opening_hours": {
+      "weekdays": "08:30 - 16:30",
+      "saturday": "08:30 - 12:00",
+      "sunday": "Closed (Emergency maternity 24/7)"
+    },
+    "how_to_book": "Telephone appointment or online prenatal/pediatric booking",
+    "foreign_friendly_notes": "Renowned center for maternal, infant, and child care. Multilingual pediatricians and midwives with extensive experience caring for international families.",
+    "source": "Tokyo_OpenData_Minato",
+    "raw_data": {
+      "mhlw_code": "1310300187"
+    }
+  },
+  {
+    "id": "clinic-ntt-east-kanto",
+    "name_ja": "NTT東日本関東病院",
+    "name_en": "NTT Medical Center Tokyo",
+    "type": "hospital",
+    "specialties": ["Internal Medicine", "Gastroenterology", "Pain Clinic", "Cardiology", "Ophthalmology", "Orthopedics"],
+    "address": "〒141-8625 東京都品川区東五反田5-9-22",
+    "phone": "03-3448-6111",
+    "website": "https://www.nmct.ntt-east.co.jp/en/",
+    "lat": 35.6312,
+    "lng": 139.7256,
+    "insurance_accepted": true,
+    "languages_supported": ["en", "ja"],
+    "opening_hours": {
+      "weekdays": "08:30 - 17:00",
+      "saturday": "Closed",
+      "sunday": "Closed (Emergency available)"
+    },
+    "how_to_book": "Online appointment system, phone reservation, or referral letter",
+    "foreign_friendly_notes": "JCI Accredited Hospital. Dedicated International Patient Support Office. Clear English medical guidance documents and transparent billing.",
+    "source": "MHLW_Tokyo",
+    "raw_data": {
+      "mhlw_code": "1310900022",
+      "jci_accredited": true
+    }
+  },
+  {
+    "id": "clinic-shinjuku-kaijo",
+    "name_ja": "新宿海上ビル診療所",
+    "name_en": "Shinjuku Kaijo Building Clinic",
+    "type": "clinic",
+    "specialties": ["General Internal Medicine", "Cardiology", "Health Screenings", "Travel Vaccines"],
+    "address": "〒160-0023 東京都新宿区西新宿1-8-1 新宿ビルディング4F",
+    "phone": "03-3344-3313",
+    "website": "https://www.shinjukukaijo.com/",
+    "lat": 35.6908,
+    "lng": 139.6974,
+    "insurance_accepted": true,
+    "languages_supported": ["en", "ja"],
+    "opening_hours": {
+      "weekdays": "09:00 - 12:30, 14:00 - 17:30",
+      "saturday": "09:00 - 12:30",
+      "sunday": "Closed"
+    },
+    "how_to_book": "Walk-in welcome or web reservation",
+    "foreign_friendly_notes": "Located just outside Shinjuku West Exit. English consultation sheets available. Popular with foreign business travelers and residents.",
+    "source": "Tokyo_OpenData_Shinjuku",
+    "raw_data": {
+      "station": "Shinjuku Station West Exit 2 min walk"
+    }
+  },
+  {
+    "id": "clinic-tokyo-yamate-jcho",
+    "name_ja": "東京山手メディカルセンター",
+    "name_en": "JCHO Tokyo Yamate Medical Center",
+    "type": "hospital",
+    "specialties": ["Gastroenterology", "Proctology", "General Surgery", "Internal Medicine", "Orthopedics"],
+    "address": "〒169-0073 東京都新宿区百人町3-22-1",
+    "phone": "03-3364-0251",
+    "website": "https://yamate.jcho.go.jp/",
+    "lat": 35.7047,
+    "lng": 139.7003,
+    "insurance_accepted": true,
+    "languages_supported": ["en", "ja"],
+    "opening_hours": {
+      "weekdays": "08:30 - 11:30 (Morning reception), 13:00 - 15:00",
+      "saturday": "Closed",
+      "sunday": "Closed (Emergency open)"
+    },
+    "how_to_book": "Referral letter from local clinic or walk-in with Sentei Ryouyouhi fee",
+    "foreign_friendly_notes": "Centrally located near Shin-Okubo. Highly experienced with diverse international populations and multilingual dietary considerations.",
+    "source": "MHLW_Tokyo",
+    "raw_data": {
+      "beds": 418
+    }
+  },
+  {
+    "id": "clinic-nishikasai-derma",
+    "name_ja": "西葛西駅前内科皮膚科",
+    "name_en": "Nishi-Kasai Ekimae Internal Medicine & Dermatology",
+    "type": "clinic",
+    "specialties": ["Internal Medicine", "Dermatology", "Allergy", "Respiratory Medicine"],
+    "address": "〒134-0088 東京都江戸川区西葛西3-16-13 葛西第一生命ビル2F",
+    "phone": "03-5679-5100",
+    "website": "https://nishikasai-ekimae.com/",
+    "lat": 35.6659,
+    "lng": 139.8603,
+    "insurance_accepted": true,
+    "languages_supported": ["en", "hi", "ja"],
+    "opening_hours": {
+      "weekdays": "09:00 - 12:30, 14:30 - 18:30",
+      "saturday": "09:00 - 13:00",
+      "sunday": "Closed"
+    },
+    "how_to_book": "Direct walk-in accepted with minimal wait; web ticket system",
+    "foreign_friendly_notes": "Right at Nishi-Kasai station. Frequently assists Indian residents with skin conditions, tropical allergies, and chronic medication refills.",
+    "source": "Tokyo_OpenData_Edogawa",
+    "raw_data": {
+      "station": "Nishi-Kasai Station South Exit 1 min"
+    }
+  },
+  {
+    "id": "clinic-utokyo-hospital",
+    "name_ja": "東京大学医学部附属病院",
+    "name_en": "The University of Tokyo Hospital",
+    "type": "hospital",
+    "specialties": ["All Medical Specialties", "Advanced Surgery", "Emergency Critical Care", "Cardiology", "Neurology", "Pediatrics"],
+    "address": "〒113-8655 東京都文京区本郷7-3-1",
+    "phone": "03-3815-5411",
+    "website": "https://www.h.u-tokyo.ac.jp/english/",
+    "lat": 35.7120,
+    "lng": 139.7654,
+    "insurance_accepted": true,
+    "languages_supported": ["en", "ja"],
+    "opening_hours": {
+      "weekdays": "08:25 - 17:00",
+      "saturday": "Emergency Only",
+      "sunday": "Emergency Only"
+    },
+    "how_to_book": "Referral letter strongly recommended; International Medical Center handles foreign patients",
+    "foreign_friendly_notes": "Top university teaching hospital in Japan. Specialized International Medical Care Department coordinating appointments, translation, and insurance verification.",
+    "source": "MHLW_Tokyo",
+    "raw_data": {
+      "beds": 1217,
+      "advanced_treatment_hospital": true
+    }
+  }
+]
