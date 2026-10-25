@@ -14,8 +14,14 @@ import {
   ArrowRight,
   CheckCircle,
   Clock,
-  Sparkles
+  Sparkles,
+  Copy,
+  Check
 } from 'lucide-react';
+import EmergencyPhoneDirectory from '@/components/EmergencyPhoneDirectory';
+import EmergencyLocationCard from '@/components/EmergencyLocationCard';
+import EmergencyCallScriptCard from '@/components/EmergencyCallScriptCard';
+import EmergencyPhrasesCards from '@/components/EmergencyPhrasesCards';
 
 export default function EmergencyPage() {
   const [triageAnswers, setTriageAnswers] = useState({
@@ -28,6 +34,13 @@ export default function EmergencyPage() {
   });
 
   const [emergencyHospitals, setEmergencyHospitals] = useState<any[]>([]);
+  const [copiedBannerNumber, setCopiedBannerNumber] = useState<string | null>(null);
+
+  const handleBannerCopy = (num: string) => {
+    navigator.clipboard.writeText(num);
+    setCopiedBannerNumber(num);
+    setTimeout(() => setCopiedBannerNumber(null), 2000);
+  };
 
   useEffect(() => {
     async function loadEmergencyHospitals() {
@@ -65,50 +78,121 @@ export default function EmergencyPage() {
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
       
       {/* Top Banner */}
-      <div className="bg-gradient-to-r from-emergency-900 via-emergency-800 to-navy-950 text-white rounded-3xl p-6 sm:p-10 border border-emergency-700 shadow-xl">
+      <div 
+        className="bg-[#3b0707] bg-gradient-to-r from-red-950 via-red-900 to-navy-950 text-white rounded-3xl p-6 sm:p-10 border border-red-800/80 shadow-2xl"
+        style={{ background: 'linear-gradient(135deg, #3b0707 0%, #7f1d1d 50%, #0a0f1d 100%)' }}
+      >
         <div className="max-w-3xl space-y-4">
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white/20 text-white border border-white/30 text-xs font-bold">
-            <AlertTriangle className="w-3.5 h-3.5 text-emergency-300" />
+          <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-red-950/80 text-red-200 border border-red-500/50 text-xs font-bold shadow-inner">
+            <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
             <span>Japan Emergency Care Guidance (救急ナビ)</span>
           </div>
 
-          <h1 className="font-heading font-black text-3xl sm:text-5xl tracking-tight text-white">
+          <h1 className="font-heading font-black text-3xl sm:text-5xl tracking-tight text-white drop-shadow-sm">
             Emergency 119 & ER Assistance
           </h1>
 
-          <p className="text-xs sm:text-sm text-emergency-100 leading-relaxed max-w-2xl">
-            In Japan, dialing <strong>119</strong> calls an ambulance. If you are unsure whether your condition warrants an ambulance, Tokyo&apos;s <strong>#7119</strong> emergency consultation center can advise you in English.
+          <p className="text-sm sm:text-base text-red-100 leading-relaxed max-w-2xl font-normal">
+            In Japan, dialing <strong className="text-white font-bold underline decoration-red-400/60 decoration-2">119</strong> calls an ambulance. If you are unsure whether your condition warrants an ambulance, Tokyo&apos;s <strong className="text-white font-bold underline decoration-red-400/60 decoration-2">#7119</strong> emergency consultation center can advise you in English.
           </p>
 
-          {/* Quick Dial Buttons */}
+          {/* Quick Dial Buttons with tel:%237119 and Desktop Copy */}
           <div className="pt-2 flex flex-wrap items-center gap-3">
-            <a
-              href="tel:119"
-              className="px-6 py-3.5 rounded-2xl bg-white text-emergency-800 hover:bg-emergency-50 font-heading font-black text-sm shadow-lg flex items-center space-x-2 transition-transform hover:scale-105"
+            {/* Primary 119 Button: Solid Red Background, White Bold Text */}
+            <div 
+              className="flex items-center space-x-1.5 bg-red-600 hover:bg-red-700 text-white rounded-2xl p-1 shadow-xl ring-2 ring-red-400/80 transition-all hover:scale-105"
+              style={{ backgroundColor: '#dc2626' }}
             >
-              <PhoneCall className="w-5 h-5 text-emergency-600" />
-              <span>DIAL 119 (AMBULANCE / 救急)</span>
-            </a>
+              <a
+                href="tel:119"
+                className="px-5 py-2.5 text-white font-heading font-black text-sm sm:text-base flex items-center space-x-2"
+              >
+                <PhoneCall className="w-5 h-5 text-white animate-bounce shrink-0" />
+                <span className="font-bold text-white tracking-wide">Dial 119 (Ambulance / Fire)</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => handleBannerCopy('119')}
+                className="hidden sm:flex items-center space-x-1 px-3 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white text-xs font-bold transition-colors border border-red-400/40"
+                style={{ backgroundColor: '#b91c1c' }}
+                title="Copy 119"
+              >
+                {copiedBannerNumber === '119' ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-white" />
+                    <span>Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5 text-white" />
+                    <span>Copy</span>
+                  </>
+                )}
+              </button>
+            </div>
 
-            <a
-              href="tel:#7119"
-              className="px-5 py-3.5 rounded-2xl bg-emergency-700/80 hover:bg-emergency-700 text-white border border-emergency-500/50 font-bold text-xs shadow-md flex items-center space-x-2 transition-colors"
-            >
-              <Phone className="w-4 h-4" />
-              <span>Dial #7119 (Medical Consultation)</span>
-            </a>
+            <div className="flex items-center space-x-1.5 bg-emergency-700/80 hover:bg-emergency-700 text-white border border-emergency-500/50 rounded-2xl p-1 shadow-md">
+              <a
+                href="tel:%237119"
+                className="px-4 py-2.5 font-bold text-xs flex items-center space-x-2"
+              >
+                <Phone className="w-4 h-4 text-emergency-300" />
+                <span>Dial #7119 (Medical Consultation)</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => handleBannerCopy('#7119')}
+                className="hidden sm:flex items-center space-x-1 px-2.5 py-2 rounded-xl bg-emergency-800/80 hover:bg-emergency-900 text-white text-xs font-bold transition-colors"
+                title="Copy #7119"
+              >
+                {copiedBannerNumber === '#7119' ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5 text-white/80" />
+                    <span>Copy</span>
+                  </>
+                )}
+              </button>
+            </div>
 
-            <a
-              href="tel:03-5285-8181"
-              className="px-4 py-3.5 rounded-2xl bg-navy-900/80 hover:bg-navy-900 text-navy-200 border border-navy-700 font-medium text-xs flex items-center space-x-1.5 transition-colors"
-              title="Tokyo Metropolitan Health Services 'Himawari' Multilingual Helpline"
-            >
-              <span>Himawari Multilingual Helpline (03-5285-8181)</span>
-            </a>
+            <div className="flex items-center space-x-1.5 bg-blue-700/80 hover:bg-blue-700 text-white border border-blue-500/50 rounded-2xl p-1 shadow-md">
+              <a
+                href="tel:110"
+                className="px-4 py-2.5 font-bold text-xs flex items-center space-x-2"
+              >
+                <Phone className="w-4 h-4 text-blue-200" />
+                <span>Dial 110 (Police / 警察)</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => handleBannerCopy('110')}
+                className="hidden sm:flex items-center space-x-1 px-2.5 py-2 rounded-xl bg-blue-800/80 hover:bg-blue-900 text-white text-xs font-bold transition-colors"
+                title="Copy 110"
+              >
+                {copiedBannerNumber === '110' ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5 text-white/80" />
+                    <span>Copy</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
         </div>
       </div>
+
+      {/* Emergency Phone Directory Config Component */}
+      <EmergencyPhoneDirectory />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
@@ -279,64 +363,16 @@ export default function EmergencyPage() {
 
           </div>
 
+          {/* Current GPS Location for 119 Dispatch */}
+          <EmergencyLocationCard />
+
         </div>
 
         {/* Right Column: 119 Phone Dialogue & Emergency Hospitals */}
         <div className="lg:col-span-6 space-y-6">
           
-          {/* 119 Japanese Phonetic Dialogue Guide */}
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-navy-200 shadow-card space-y-4">
-            <div className="flex items-center space-x-2.5">
-              <div className="w-9 h-9 rounded-xl bg-emergency-100 text-emergency-700 flex items-center justify-center">
-                <Volume2 className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-heading font-bold text-base text-navy-950">
-                  What to Say When Calling 119
-                </h3>
-                <p className="text-xs text-navy-500">
-                  Japanese emergency operators speak slowly and clearly. Read these phonetic phrases:
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-3 text-xs pt-1">
-              
-              {/* Step 1 */}
-              <div className="p-3.5 bg-navy-50 rounded-2xl space-y-1">
-                <span className="text-[10px] font-bold text-navy-400 uppercase">
-                  1. Operator asks: Fire or Medical? (火事ですか？救急ですか？)
-                </span>
-                <p className="font-bold text-sm text-navy-900">
-                  &ldquo;Kyuukyuu desu!&rdquo; (きゅうきゅう です)
-                </p>
-                <p className="text-navy-600 text-[11px]">&rarr; &quot;It is a medical emergency / ambulance!&quot;</p>
-              </div>
-
-              {/* Step 2 */}
-              <div className="p-3.5 bg-navy-50 rounded-2xl space-y-1">
-                <span className="text-[10px] font-bold text-navy-400 uppercase">
-                  2. Operator asks: What is your address? (住所・場所はどこですか？)
-                </span>
-                <p className="font-bold text-sm text-navy-900">
-                  &ldquo;Basho wa [Ward / Station / Address] desu&rdquo;
-                </p>
-                <p className="text-navy-600 text-[11px]">&rarr; &quot;The location is [Your Address]&quot;. Give a nearby landmark or station.</p>
-              </div>
-
-              {/* Step 3 */}
-              <div className="p-3.5 bg-navy-50 rounded-2xl space-y-1">
-                <span className="text-[10px] font-bold text-navy-400 uppercase">
-                  3. If you do not speak Japanese:
-                </span>
-                <p className="font-bold text-sm text-navy-900">
-                  &ldquo;Eigo ga hanaseru hito wa imasu ka?&rdquo; (英語が話せる人はいますか？)
-                </p>
-                <p className="text-navy-600 text-[11px]">&rarr; &quot;Is there someone who can speak English?&quot; (Tokyo 119 has 3-way translation services).</p>
-              </div>
-
-            </div>
-          </div>
+          {/* Trilingual 119 Call Script & Dialogue Guide */}
+          <EmergencyCallScriptCard />
 
           {/* Real Emergency Hospitals Directory */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-navy-200 shadow-card space-y-4">
@@ -397,6 +433,9 @@ export default function EmergencyPage() {
         </div>
 
       </div>
+
+      {/* Show-to-Stranger Large Japanese Phrase Cards */}
+      <EmergencyPhrasesCards />
 
     </div>
   );

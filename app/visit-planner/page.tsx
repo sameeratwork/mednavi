@@ -19,6 +19,7 @@ import {
   FileText
 } from 'lucide-react';
 import CostBreakdown from '@/components/CostBreakdown';
+import VisitCalendarSection from '@/components/visit-calendar/VisitCalendarSection';
 
 function VisitPlannerContent() {
   const searchParams = useSearchParams();
@@ -292,6 +293,9 @@ function VisitPlannerContent() {
           </div>
         </div>
       )}
+
+      {/* Visit Calendar Section */}
+      <VisitCalendarSection selectedClinic={selectedClinic} />
     </div>
   );
 }
