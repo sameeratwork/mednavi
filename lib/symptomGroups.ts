@@ -1004,9 +1004,20 @@ export const SYMPTOM_GROUPS: SymptomGroup[] = [
       'sprained ankle', 'muscle strain', 'tennis elbow', 'bone fracture evaluation'
     ],
     keywords: {
-      en: ['back pain', 'lower back pain', 'knee pain', 'shoulder pain', 'joint pain', 'sprain', 'bone fracture', 'stiff neck', 'sciatica'],
-      ja: ['腰痛', 'ぎっくり腰', 'ひざの痛み', '肩の痛み', '五十肩', '関節痛', '捻挫', '骨折', '腱鞘炎', '坐骨神経痛'],
-      hi: ['कमर दर्द', 'घुटने का दर्द', 'कंधे में दर्द', 'जोड़ों का दर्द', 'मोच', 'हड्डी में चोट', 'साइटिका']
+      en: [
+        'back pain', 'lower back pain', 'knee pain', 'shoulder pain', 'joint pain', 'sprain', 'bone fracture', 'stiff neck', 'sciatica',
+        'joint', 'joints', 'muscle', 'muscles', 'bone', 'bones', 'ligament', 'ligaments', 'tendon', 'tendons',
+        'bicep', 'biceps', 'tricep', 'tear', 'torn', 'strain', 'strained', 'pulled muscle', 'cramp',
+        'back', 'knee', 'shoulder', 'neck', 'elbow', 'wrist', 'ankle', 'hip'
+      ],
+      ja: [
+        '腰痛', 'ぎっくり腰', 'ひざの痛み', '肩の痛み', '五十肩', '関節痛', '捻挫', '骨折', '腱鞘炎', '坐骨神経痛',
+        '関節', '筋肉', '骨', '靭帯', '腱', '肉離れ', '腰', '膝', '肩', '首', '肘', '手首', '足首'
+      ],
+      hi: [
+        'कमर दर्द', 'घुटने का दर्द', 'कंधे में दर्द', 'जोड़ों का दर्द', 'मोच', 'हड्डी में चोट', 'साइटिका',
+        'जोड़', 'मांसपेशी', 'हड्डी', 'लिगामेंट', 'कंधा', 'घुटना'
+      ]
     },
     primaryDept: '整形外科',
     redFlags: [
@@ -1031,9 +1042,18 @@ export const SYMPTOM_GROUPS: SymptomGroup[] = [
       'blunt trauma', 'road accident minor injuries', 'puncture wound', 'tetanus risk'
     ],
     keywords: {
-      en: ['cut', 'deep wound', 'bleeding wound', 'stitches', 'burn', 'scald', 'accident injury', 'bruised rib', 'fall injury'],
-      ja: ['切り傷', '傷口', '縫合', 'やけど', '火傷', '外傷', '打撲', 'ケガ', '事故のケガ'],
-      hi: ['कट लगना', 'गहरा घाव', 'टांके लगना', 'जलना', 'चोट लगना', 'दुर्घटना में चोट']
+      en: [
+        'cut', 'deep wound', 'bleeding wound', 'stitches', 'burn', 'scald', 'accident injury', 'bruised rib', 'fall injury',
+        'injury', 'injured', 'sprain', 'twisted', 'fall', 'fell', 'accident'
+      ],
+      ja: [
+        '切り傷', '傷口', '縫合', 'やけど', '火傷', '外傷', '打撲', 'ケガ', '事故のケガ',
+        '怪我', 'けが', '捻挫', '転倒'
+      ],
+      hi: [
+        'कट लगना', 'गहरा घाव', 'टांके लगना', 'जलना', 'चोट लगना', 'दुर्घटना में चोट',
+        'चोट', 'मोच'
+      ]
     },
     primaryDept: '外科',
     backupDept: '整形外科',

@@ -6,6 +6,7 @@ import {
   MessageSquare,
   Send,
   AlertTriangle,
+  AlertCircle,
   RotateCcw,
   Sparkles,
   PhoneCall,
@@ -119,6 +120,7 @@ export default function SymptomChatbot() {
   const [doctorNotes, setDoctorNotes] = useState<GeneratedDoctorNote | null>(null);
   const [activeNoteTab, setActiveNoteTab] = useState<'ja' | 'en' | 'hi'>('ja');
   const [reasonLanguage, setReasonLanguage] = useState<'en' | 'hi' | 'ja'>('en');
+  const [noMatchNotice, setNoMatchNotice] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   // Reset all states
@@ -129,6 +131,7 @@ export default function SymptomChatbot() {
     setSelectedGroup(null);
     setCandidateGroup(null);
     setBrowsingCategory(null);
+    setNoMatchNotice(null);
     setSelectedRedFlags([]);
     setEmergencyTriggered(false);
     setEmergencyReason(null);
@@ -154,6 +157,8 @@ export default function SymptomChatbot() {
     const text = inputText.trim();
     if (!text) return;
 
+    setNoMatchNotice(null);
+
     // 1. Instant emergency check (EN, JA, HI)
     if (checkEmergencyTrigger(text)) {
       setEmergencyReason('Immediate emergency keywords detected in your description.');
@@ -173,8 +178,12 @@ export default function SymptomChatbot() {
       setCandidateGroup(matched);
       setCurrentStep(2); // Ask "Is it X?"
     } else {
-      // No keyword match: guide user to pick from 13 body-area categories
-      setBrowsingCategory(SYMPTOM_CATEGORIES[0]);
+      // Do NOT open a category sub-menu.
+      // Show the full category grid with the message "I couldn't match that. Please pick the closest area."
+      setCandidateGroup(null);
+      setBrowsingCategory(null);
+      setNoMatchNotice("I couldn't match that. Please pick the closest area.");
+      setCurrentStep(1);
     }
   };
 
@@ -437,6 +446,14 @@ export default function SymptomChatbot() {
                 </span>
               </div>
             </form>
+
+            {/* Unmatched text message */}
+            {noMatchNotice && (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3 text-amber-900 text-sm font-medium animate-in fade-in">
+                <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+                <span>{noMatchNotice}</span>
+              </div>
+            )}
 
             <div className="relative flex py-2 items-center">
               <div className="flex-grow border-t border-gray-200"></div>

@@ -87,6 +87,22 @@ export const SELF_HARM_PHRASES = {
   ]
 };
 
+export const NO_MATCH_MESSAGE = "I couldn't match that. Please pick the closest area.";
+
+/**
+ * Matches input text against symptom groups using keyword ranking
+ */
+export function matchSymptomText(text: string): {
+  matchedGroup?: SymptomGroup;
+  noMatchMessage?: string;
+} {
+  const matched = findGroupByKeyword(text);
+  if (!matched) {
+    return { noMatchMessage: NO_MATCH_MESSAGE };
+  }
+  return { matchedGroup: matched };
+}
+
 /**
  * Checks for immediate emergency words
  */
