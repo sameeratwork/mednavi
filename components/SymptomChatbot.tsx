@@ -118,6 +118,7 @@ export default function SymptomChatbot() {
   const [backupDeptInfo, setBackupDeptInfo] = useState<CanonicalDepartment | null>(null);
   const [doctorNotes, setDoctorNotes] = useState<GeneratedDoctorNote | null>(null);
   const [activeNoteTab, setActiveNoteTab] = useState<'ja' | 'en' | 'hi'>('ja');
+  const [reasonLanguage, setReasonLanguage] = useState<'en' | 'hi' | 'ja'>('en');
   const [copied, setCopied] = useState(false);
 
   // Reset all states
@@ -142,6 +143,8 @@ export default function SymptomChatbot() {
     setPrimaryDeptInfo(null);
     setBackupDeptInfo(null);
     setDoctorNotes(null);
+    setActiveNoteTab('ja');
+    setReasonLanguage('en');
     setCopied(false);
   };
 
@@ -1034,31 +1037,149 @@ export default function SymptomChatbot() {
         {currentStep === 9 && selectedGroup && urgencyResult && doctorNotes && (
           <div className="space-y-6 max-w-3xl mx-auto">
             {/* Top Banner: Department Match */}
-            <div className="bg-linear-to-r from-blue-900 to-indigo-900 rounded-2xl p-6 shadow-md border border-slate-200">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <span className="text-xs uppercase font-bold tracking-wider text-slate-500">
-                    Recommended Medical Department (推奨診療科)
-                  </span>
-                  <h3 className="text-2xl sm:text-3xl font-extrabold mt-1 font-japanese text-slate-900">
-                    {primaryDeptInfo?.ja || selectedGroup.primaryDept}
-                  </h3>
-                  <p className="text-slate-700 text-sm font-medium mt-0.5">
-                    {primaryDeptInfo?.romaji && `${primaryDeptInfo.romaji} • `}
-                    {primaryDeptInfo?.en || selectedGroup.primaryDept}
-                  </p>
-                </div>
+            <div className="bg-linear-to-r from-blue-900 to-indigo-900 rounded-2xl p-6 shadow-md border border-slate-200 space-y-4">
+              <div>
+                <span className="text-xs uppercase font-bold tracking-wider text-slate-500">
+                  Recommended Medical Department (推奨診療科)
+                </span>
+                <h3 className="text-2xl sm:text-3xl font-extrabold mt-1 text-blue-700">
+                  {primaryDeptInfo?.en || selectedGroup.primaryDept} ({primaryDeptInfo?.ja || selectedGroup.primaryDept})
+                </h3>
+                <p className="text-slate-700 text-sm font-medium mt-0.5">
+                  {primaryDeptInfo?.romaji && `${primaryDeptInfo.romaji} • `}
+                  {primaryDeptInfo?.en || selectedGroup.primaryDept}
+                </p>
 
                 {backupDeptInfo && (
-                  <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-3 sm:text-right">
+                  <div className="mt-3 pt-3 border-t border-slate-200/60">
                     <span className="text-2xs text-slate-500 uppercase font-bold tracking-wider block">
                       Backup Specialty (代替診療科)
                     </span>
-                    <span className="font-bold text-sm font-japanese text-slate-600">{backupDeptInfo.ja}</span>
-                    <span className="text-xs text-slate-600 block">{backupDeptInfo.en}</span>
+                    <h4 className="text-lg font-bold text-blue-600 mt-0.5">
+                      {backupDeptInfo.en} ({backupDeptInfo.ja})
+                    </h4>
+                    {backupDeptInfo.romaji && (
+                      <p className="text-xs text-slate-600 mt-0.5 font-medium">
+                        {backupDeptInfo.romaji}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
+
+              {/* Why this department box */}
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-slate-700 text-sm leading-relaxed">
+                <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                  <span className="font-bold text-xs uppercase tracking-wide text-blue-800">
+                    Why this department
+                  </span>
+                  {/* EN | हिन्दी | 日本語 toggle */}
+                  <div className="flex items-center bg-white border border-blue-200 rounded-lg p-0.5 text-2xs font-semibold shadow-2xs">
+                    <button
+                      type="button"
+                      onClick={() => setReasonLanguage('en')}
+                      className={`px-2 py-0.5 rounded transition ${
+                        reasonLanguage === 'en'
+                          ? 'bg-blue-600 text-white shadow-2xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      EN
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReasonLanguage('hi')}
+                      className={`px-2 py-0.5 rounded transition ${
+                        reasonLanguage === 'hi'
+                          ? 'bg-blue-600 text-white shadow-2xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      हिन्दी
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReasonLanguage('ja')}
+                      className={`px-2 py-0.5 rounded transition ${
+                        reasonLanguage === 'ja'
+                          ? 'bg-blue-600 text-white shadow-2xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      日本語
+                    </button>
+                  </div>
+                </div>
+                <p>
+                  {reasonLanguage === 'ja'
+                    ? `主訴として「${selectedGroup.name.ja}」が確認され、日本の医療機関では通常「${primaryDeptInfo?.ja || selectedGroup.primaryDept}」が専門の担当診療科となります。`
+                    : reasonLanguage === 'hi'
+                    ? (selectedGroup.name.hi
+                        ? `आपकी मुख्य समस्या ${selectedGroup.name.hi} है, जिसके लिए आमतौर पर ${primaryDeptInfo?.en || selectedGroup.primaryDept} (${primaryDeptInfo?.ja || selectedGroup.primaryDept}) विभाग में परामर्श दिया जाता है।`
+                        : `Your main concern is ${selectedGroup.name.en}, which is usually handled by ${primaryDeptInfo?.en || selectedGroup.primaryDept} (${primaryDeptInfo?.ja || selectedGroup.primaryDept}).`)
+                    : `Your main concern is ${selectedGroup.name.en}, which is usually handled by ${primaryDeptInfo?.en || selectedGroup.primaryDept} (${primaryDeptInfo?.ja || selectedGroup.primaryDept}).`}
+                </p>
+              </div>
+
+              {/* Your answers list */}
+              <div className="bg-white/80 border border-slate-200 rounded-xl p-4 text-slate-700 text-xs sm:text-sm space-y-2">
+                <span className="font-bold block text-xs uppercase tracking-wide text-slate-500 mb-2">
+                  Your answers
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+                  <div>
+                    <span className="font-semibold text-slate-600 block sm:inline">Main problem: </span>
+                    <span className="text-slate-800">{inputText.trim() || selectedGroup.name.en}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-slate-600 block sm:inline">How long: </span>
+                    <span className="text-slate-800">
+                      {duration && !duration.includes('Not specified') && !duration.includes('未記載')
+                        ? duration
+                        : 'Skipped'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-slate-600 block sm:inline">Severity: </span>
+                    <span className="text-slate-800">{severity ? `${severity} / 10` : 'Skipped'}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-slate-600 block sm:inline">Age group: </span>
+                    <span className="text-slate-800">
+                      {ageGroup
+                        ? isPregnant === 'Currently pregnant'
+                          ? `${ageGroup} (Pregnant)`
+                          : ageGroup
+                        : 'Skipped'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-slate-600 block sm:inline">Medicines: </span>
+                    <span className="text-slate-800">
+                      {medications && !medications.includes('None reported') && !medications.includes('特になし')
+                        ? medications
+                        : medications.includes('None')
+                        ? 'None reported'
+                        : 'Skipped'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-slate-600 block sm:inline">Allergies / Conditions: </span>
+                    <span className="text-slate-800">
+                      {allergies && !allergies.includes('None reported') && !allergies.includes('特になし')
+                        ? allergies
+                        : allergies.includes('None')
+                        ? 'None reported'
+                        : 'Skipped'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Disclaimer */}
+              <p className="text-2xs sm:text-xs text-slate-500 italic">
+                This is a suggestion, not a diagnosis.
+              </p>
             </div>
 
             {/* Urgency Badge */}
