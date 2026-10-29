@@ -53,8 +53,10 @@ import {
   generateDoctorNotes,
   PatientIntakeData,
   UrgencyInfo,
-  GeneratedDoctorNote
+  GeneratedDoctorNote,
+  AnsweredGroupQuestion
 } from '@/lib/ai/symptomChatbot';
+import { GroupQuestion } from '@/lib/symptomQuestions';
 import { getCanonicalDepartment, CanonicalDepartment } from '@/lib/departments';
 import MatchingClinicsList from './MatchingClinicsList';
 
@@ -80,6 +82,7 @@ export default function SymptomChatbot() {
   // 1: Start (Input / Categories)
   // 2: Confirm Matched Group ("Is it X?")
   // 3: Emergency Tick-List (Red Flags)
+  // 10: Group-Specific Questions (sub-indexed by groupQIdx)
   // 4: Shared Q1 - Duration
   // 5: Shared Q2 - Severity (1-10)
   // 6: Shared Q3 - Age Group & Pregnancy
@@ -113,6 +116,13 @@ export default function SymptomChatbot() {
   const [medications, setMedications] = useState('');
   const [allergies, setAllergies] = useState('');
 
+  // Group-specific questions state
+  const [groupQIdx, setGroupQIdx] = useState<number>(0);
+  // groupQAnswers: questionId -> array of selected option ids
+  const [groupQAnswers, setGroupQAnswers] = useState<Record<string, string[]>>({});
+  // tempSelection: option ids selected in the current question (not yet committed)
+  const [tempSelection, setTempSelection] = useState<string[]>([]);
+
   // Result state
   const [urgencyResult, setUrgencyResult] = useState<UrgencyInfo | null>(null);
   const [primaryDeptInfo, setPrimaryDeptInfo] = useState<CanonicalDepartment | null>(null);
@@ -144,6 +154,9 @@ export default function SymptomChatbot() {
     setIsPregnant('not_pregnant');
     setMedications('');
     setAllergies('');
+    setGroupQIdx(0);
+    setGroupQAnswers({});
+    setTempSelection([]);
     setUrgencyResult(null);
     setPrimaryDeptInfo(null);
     setBackupDeptInfo(null);
@@ -230,10 +243,26 @@ export default function SymptomChatbot() {
     setSelectedGroup(group);
     setCandidateGroup(null);
     setBrowsingCategory(null);
+    setGroupQIdx(0);
+    setGroupQAnswers({});
+    setTempSelection([]);
 
-    // If group has red flags, go to emergency tick-list, else go to Q1
+    // Order: red flags first, then group questions, then shared questions
     if (group.redFlags && group.redFlags.length > 0) {
       setCurrentStep(3);
+    } else if (group.questions && group.questions.length > 0) {
+      setCurrentStep(10);
+    } else {
+      setCurrentStep(4);
+    }
+  };
+
+  // Helper: after red flags pass, go to group questions if any, else shared Q1
+  const afterRedFlags = (group: SymptomGroup | null) => {
+    if (group && group.questions && group.questions.length > 0) {
+      setGroupQIdx(0);
+      setTempSelection(groupQAnswers[group.questions[0]?.id] ?? []);
+      setCurrentStep(10);
     } else {
       setCurrentStep(4);
     }
@@ -246,14 +275,41 @@ export default function SymptomChatbot() {
       setEmergencyTriggered(true);
     } else {
       setSelectedRedFlags([]);
-      // Group questions are empty for now, proceed to shared Q1
-      setCurrentStep(4);
+      afterRedFlags(selectedGroup);
     }
+  };
+
+  // Build AnsweredGroupQuestion list from current answers (re-computed on finalize)
+  const buildGroupAnswers = (): AnsweredGroupQuestion[] => {
+    if (!selectedGroup || !selectedGroup.questions?.length) return [];
+    const result: AnsweredGroupQuestion[] = [];
+    for (const q of selectedGroup.questions) {
+      const selectedIds = groupQAnswers[q.id];
+      if (!selectedIds || selectedIds.length === 0) continue;
+      const selectedOptions = q.options
+        .filter((o) => selectedIds.includes(o.id))
+        .map((o) => ({
+          id: o.id,
+          label: { ja: o.label.ja, en: o.label.en, hi: o.label.hi },
+          urgency: o.urgency,
+          useBackupDept: o.useBackupDept,
+        }));
+      if (selectedOptions.length > 0) {
+        result.push({
+          questionId: q.id,
+          noteLabel: q.noteLabel,
+          selectedOptions,
+        });
+      }
+    }
+    return result;
   };
 
   // Final calculate and note generation
   const finalizeIntake = () => {
     if (!selectedGroup) return;
+
+    const groupAnswers = buildGroupAnswers();
 
     const intake: PatientIntakeData = {
       groupId: selectedGroup.id,
@@ -264,12 +320,33 @@ export default function SymptomChatbot() {
       isPregnant,
       medications: medications || 'None reported / 特になし',
       allergies: allergies || 'None reported / 特になし',
-      checkedRedFlags: selectedRedFlags
+      checkedRedFlags: selectedRedFlags,
+      groupQuestions: groupAnswers,
     };
 
-    const pDept = getCanonicalDepartment(selectedGroup.primaryDept);
-    const bDept = selectedGroup.backupDept ? getCanonicalDepartment(selectedGroup.backupDept) : undefined;
     const urgency = evaluateUrgency(intake, selectedGroup);
+
+    // If any chosen option has urgency 'now', navigate to emergency screen
+    if (urgency.level === '119_now') {
+      setEmergencyReason('Based on your answers, immediate emergency care is required. Please call 119.');
+      setEmergencyTriggered(true);
+      return;
+    }
+
+    // Department swap: if any chosen option has useBackupDept, swap primary/backup
+    const anyUseBackup = groupAnswers.some((gq) =>
+      gq.selectedOptions.some((o) => o.useBackupDept)
+    );
+
+    let pDept = getCanonicalDepartment(selectedGroup.primaryDept);
+    let bDept = selectedGroup.backupDept ? getCanonicalDepartment(selectedGroup.backupDept) : undefined;
+
+    if (anyUseBackup && bDept) {
+      const tmp = pDept;
+      pDept = bDept;
+      bDept = tmp ?? undefined;
+    }
+
     const notes = generateDoctorNotes(intake);
 
     setPrimaryDeptInfo(pDept || null);
@@ -702,6 +779,130 @@ export default function SymptomChatbot() {
         )}
 
         {/* ───────────────────────────────────────────────────────────────────
+            STEP 10: GROUP-SPECIFIC QUESTIONS
+           ─────────────────────────────────────────────────────────────────── */}
+        {currentStep === 10 && selectedGroup && selectedGroup.questions?.length > 0 && (() => {
+          const questions: GroupQuestion[] = selectedGroup.questions;
+          const totalGroupQs = questions.length;
+          const q = questions[groupQIdx];
+          if (!q) return null;
+
+          // Language fallback: use English when label is missing
+          const lang = (ml: { en: string; ja: string; hi: string }): string =>
+            ml.en || ml.ja;
+
+          const isSingle = q.kind === 'single';
+          const currentSelections = tempSelection;
+
+          const goBack = () => {
+            if (groupQIdx === 0) {
+              // Back to red-flags or confirm
+              if (selectedGroup.redFlags?.length > 0) setCurrentStep(3);
+              else setCurrentStep(2);
+            } else {
+              const prevQ = questions[groupQIdx - 1];
+              setGroupQAnswers((prev) => ({ ...prev }));
+              setTempSelection(groupQAnswers[prevQ.id] ?? []);
+              setGroupQIdx(groupQIdx - 1);
+            }
+          };
+
+          const goNext = (answers: string[]) => {
+            const newAnswers = { ...groupQAnswers, [q.id]: answers };
+            setGroupQAnswers(newAnswers);
+            if (groupQIdx + 1 < totalGroupQs) {
+              const nextQ = questions[groupQIdx + 1];
+              setTempSelection(newAnswers[nextQ.id] ?? []);
+              setGroupQIdx(groupQIdx + 1);
+            } else {
+              setCurrentStep(4);
+            }
+          };
+
+          const toggleOption = (optId: string) => {
+            if (isSingle) {
+              setTempSelection([optId]);
+            } else {
+              setTempSelection((prev) =>
+                prev.includes(optId) ? prev.filter((x) => x !== optId) : [...prev, optId]
+              );
+            }
+          };
+
+          return (
+            <div className="max-w-xl mx-auto space-y-6 py-2">
+              <div className="border-b border-gray-100 pb-3 flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-semibold text-blue-600">
+                    Group Question {groupQIdx + 1} of {totalGroupQs}
+                  </span>
+                  <h3 className="text-lg font-bold text-gray-900">{lang(q.text)}</h3>
+                  <p className="text-xs font-japanese text-gray-600">{q.text.ja}</p>
+                </div>
+                <button
+                  onClick={goBack}
+                  className="text-xs text-gray-600 hover:text-gray-700 flex items-center gap-1"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  Back
+                </button>
+              </div>
+
+              <div className="space-y-2.5">
+                {q.options.map((opt) => {
+                  const selected = currentSelections.includes(opt.id);
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => toggleOption(opt.id)}
+                      className={`w-full text-left p-3.5 rounded-xl border text-sm font-medium transition ${
+                        selected
+                          ? 'bg-blue-50 border-blue-500 text-blue-900'
+                          : 'border-gray-200 hover:bg-gray-50 text-gray-800'
+                      }`}
+                    >
+                      <span>{lang(opt.label)}</span>
+                      {opt.label.ja && <span className="block text-xs font-japanese text-gray-500 mt-0.5">{opt.label.ja}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex justify-between items-center pt-2">
+                <button
+                  onClick={() => {
+                    // Skip: clear this question's answers
+                    const newAnswers = { ...groupQAnswers };
+                    delete newAnswers[q.id];
+                    setGroupQAnswers(newAnswers);
+                    if (groupQIdx + 1 < totalGroupQs) {
+                      const nextQ = questions[groupQIdx + 1];
+                      setTempSelection(newAnswers[nextQ.id] ?? []);
+                      setGroupQIdx(groupQIdx + 1);
+                    } else {
+                      setCurrentStep(4);
+                    }
+                  }}
+                  className="text-xs text-gray-600 hover:text-gray-700 font-medium"
+                >
+                  Skip this question
+                </button>
+                {currentSelections.length > 0 && (
+                  <button
+                    onClick={() => goNext(currentSelections)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-sm font-semibold flex items-center gap-1.5 transition"
+                  >
+                    <span>Next</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ───────────────────────────────────────────────────────────────────
             STEP 4: SHARED Q1 - DURATION
            ─────────────────────────────────────────────────────────────────── */}
         {currentStep === 4 && (
@@ -715,7 +916,19 @@ export default function SymptomChatbot() {
                 <p className="text-xs font-japanese text-gray-600">発症時期の確認</p>
               </div>
               <button
-                onClick={() => setCurrentStep(selectedGroup?.redFlags.length ? 3 : 1)}
+                onClick={() => {
+                  if (selectedGroup?.questions?.length) {
+                    // Back into group questions: go to last group question
+                    const lastIdx = selectedGroup.questions.length - 1;
+                    setGroupQIdx(lastIdx);
+                    setTempSelection(groupQAnswers[selectedGroup.questions[lastIdx].id] ?? []);
+                    setCurrentStep(10);
+                  } else if (selectedGroup?.redFlags.length) {
+                    setCurrentStep(3);
+                  } else {
+                    setCurrentStep(1);
+                  }
+                }}
                 className="text-xs text-gray-600 hover:text-gray-700 flex items-center gap-1"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />

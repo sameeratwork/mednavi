@@ -9,6 +9,7 @@
  */
 
 import { matchesKeyword } from './departments';
+import { GROUP_QUESTIONS, GroupQuestion, QuestionOption, Ml } from './symptomQuestions';
 
 export interface MultilingualText {
   en: string;
@@ -36,7 +37,7 @@ export interface SymptomGroup {
   primaryDept: string;
   backupDept?: string;
   redFlags: string[];
-  questions: any[];
+  questions: GroupQuestion[];
   reviewed: false;
 }
 
@@ -1008,15 +1009,18 @@ export const SYMPTOM_GROUPS: SymptomGroup[] = [
         'back pain', 'lower back pain', 'knee pain', 'shoulder pain', 'joint pain', 'sprain', 'bone fracture', 'stiff neck', 'sciatica',
         'joint', 'joints', 'muscle', 'muscles', 'bone', 'bones', 'ligament', 'ligaments', 'tendon', 'tendons',
         'bicep', 'biceps', 'tricep', 'tear', 'torn', 'strain', 'strained', 'pulled muscle', 'cramp',
-        'back', 'knee', 'shoulder', 'neck', 'elbow', 'wrist', 'ankle', 'hip'
+        'back', 'knee', 'shoulder', 'neck', 'elbow', 'wrist', 'ankle', 'hip',
+        'foot', 'feet', 'toe', 'heel'
       ],
       ja: [
         '腰痛', 'ぎっくり腰', 'ひざの痛み', '肩の痛み', '五十肩', '関節痛', '捻挫', '骨折', '腱鞘炎', '坐骨神経痛',
-        '関節', '筋肉', '骨', '靭帯', '腱', '肉離れ', '腰', '膝', '肩', '首', '肘', '手首', '足首'
+        '関節', '筋肉', '骨', '靭帯', '腱', '肉離れ', '腰', '膝', '肩', '首', '肘', '手首', '足首',
+        '足', 'かかと'
       ],
       hi: [
         'कमर दर्द', 'घुटने का दर्द', 'कंधे में दर्द', 'जोड़ों का दर्द', 'मोच', 'हड्डी में चोट', 'साइटिका',
-        'जोड़', 'मांसपेशी', 'हड्डी', 'लिगामेंट', 'कंधा', 'घुटना'
+        'जोड़', 'मांसपेशी', 'हड्डी', 'लिगामेंट', 'कंधा', 'घुटना',
+        'पैर'
       ]
     },
     primaryDept: '整形外科',
@@ -1366,6 +1370,47 @@ export const SYMPTOM_GROUPS: SymptomGroup[] = [
     reviewed: false
   }
 ];
+
+// Merge group-specific questions into symptom groups
+for (const g of SYMPTOM_GROUPS) {
+  if (GROUP_QUESTIONS[g.id]) {
+    g.questions = GROUP_QUESTIONS[g.id];
+  }
+}
+
+// Dev-only check to verify GROUP_QUESTIONS consistency
+function verifyGroupQuestionsDev(): void {
+  if (process.env.NODE_ENV === 'production') return;
+  try {
+    const validGroupIds = new Set(SYMPTOM_GROUPS.map((g) => g.id));
+    for (const [gid, questions] of Object.entries(GROUP_QUESTIONS)) {
+      if (!validGroupIds.has(gid)) {
+        console.warn(`[GROUP_QUESTIONS] Invalid group id: "${gid}"`);
+      }
+      if (questions.length > 4) {
+        console.warn(`[GROUP_QUESTIONS] Group "${gid}" exceeds maximum 4 questions (${questions.length})`);
+      }
+      for (const q of questions) {
+        if (!q.text?.en || !q.text?.ja || !q.text?.hi) {
+          console.warn(`[GROUP_QUESTIONS] Question "${q.id}" in group "${gid}" missing multilingual text`);
+        }
+        const optionIds = new Set<string>();
+        for (const opt of q.options) {
+          if (optionIds.has(opt.id)) {
+            console.warn(`[GROUP_QUESTIONS] Duplicate option id "${opt.id}" in question "${q.id}" (${gid})`);
+          }
+          optionIds.add(opt.id);
+          if (!opt.label?.en || !opt.label?.ja || !opt.label?.hi) {
+            console.warn(`[GROUP_QUESTIONS] Option "${opt.id}" in question "${q.id}" (${gid}) missing multilingual label`);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[GROUP_QUESTIONS] Dev check failed:', err);
+  }
+}
+verifyGroupQuestionsDev();
 
 /**
  * Matches input text against symptom groups using keyword ranking

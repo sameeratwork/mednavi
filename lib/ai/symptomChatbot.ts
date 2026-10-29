@@ -18,6 +18,17 @@ import {
 } from '../symptomGroups';
 import { EMERGENCY_NUMBERS } from '../emergencyNumbers';
 
+export interface AnsweredGroupQuestion {
+  questionId: string;
+  noteLabel: { ja: string; en: string };
+  selectedOptions: {
+    id: string;
+    label: { ja: string; en: string; hi: string };
+    urgency?: 'now' | 'today' | 'days';
+    useBackupDept?: boolean;
+  }[];
+}
+
 export interface PatientIntakeData {
   groupId: string;
   chiefComplaint?: string;
@@ -28,6 +39,7 @@ export interface PatientIntakeData {
   medications?: string;
   allergies?: string;
   checkedRedFlags?: string[];
+  groupQuestions?: AnsweredGroupQuestion[];
 }
 
 export type UrgencyLevel = '119_now' | 'see_doctor_today' | 'within_few_days' | 'routine';
@@ -258,9 +270,19 @@ export function normalizeAgeAndPregnancy(
  * Age 65+ or under 3 with fever raises it!
  */
 export function evaluateUrgency(data: PatientIntakeData, group?: SymptomGroup): UrgencyInfo {
+  // Rank levels: routine (0) < within_few_days (1) < see_doctor_today (2) < 119_now (3)
+  const urgencyRankMap: Record<UrgencyLevel, number> = {
+    routine: 0,
+    within_few_days: 1,
+    see_doctor_today: 2,
+    '119_now': 3
+  };
+
+  let baseUrgency: UrgencyInfo;
+
   // 1. Any checked red flags -> 119 now
   if (data.checkedRedFlags && data.checkedRedFlags.length > 0) {
-    return {
+    baseUrgency = {
       level: '119_now',
       badge: {
         en: 'Immediate 119 Call Needed',
@@ -274,83 +296,147 @@ export function evaluateUrgency(data: PatientIntakeData, group?: SymptomGroup): 
       },
       color: 'red'
     };
+  } else {
+    const severity = typeof data.severity === 'number' ? data.severity : 5;
+    const isFeverGroup = data.groupId === 'g01' || data.groupId === 'g14';
+    const isInfant = data.ageGroup?.includes('under_3') || data.ageGroup?.includes('Infant') || data.ageGroup?.includes('乳幼児');
+    const isSenior = data.ageGroup?.includes('65+') || data.ageGroup?.includes('Senior') || data.ageGroup?.includes('高齢者');
+
+    // Rule: Age 65+ or under 3 with fever raises urgency to "See a doctor today"
+    if (isFeverGroup && (isInfant || isSenior)) {
+      baseUrgency = {
+        level: 'see_doctor_today',
+        badge: {
+          en: 'See a Doctor Today (High Priority)',
+          ja: '本日中に医療機関を受診（優先度高）',
+          hi: 'आज ही डॉक्टर को दिखाएं (उच्च प्राथमिकता)'
+        },
+        description: {
+          en: 'Fever in infants under 3 or seniors (65+) requires timely medical evaluation today to prevent sudden complications.',
+          ja: '乳幼児や65歳以上の高齢者の発熱は急激に重症化しやすいため、本日中の速やかな受診をお勧めします。',
+          hi: 'शिशुओं या 65 वर्ष से अधिक उम्र के बुजुर्गों में बुखार जटिलताओं से बचने के लिए आज ही डॉक्टर द्वारा देखा जाना चाहिए।'
+        },
+        color: 'amber'
+      };
+    } else if (severity >= 8 || (severity >= 6 && (data.duration?.includes('today') || data.duration?.includes('hours')))) {
+      // 2. High severity (>= 8) or severe acute onset (>= 6 with today/yesterday)
+      baseUrgency = {
+        level: 'see_doctor_today',
+        badge: {
+          en: 'See a Doctor Today',
+          ja: '本日中に医療機関を受診',
+          hi: 'आज ही डॉक्टर को दिखाएं'
+        },
+        description: {
+          en: 'Your reported discomfort is severe. Visit a clinic or hospital consultation center today during opening hours.',
+          ja: '強い症状が見られます。本日の診療時間内に医療機関を受診してください。',
+          hi: 'आपके लक्षण गंभीर हैं। कृपया आज ही क्लिनिक या अस्पताल जाएं।'
+        },
+        color: 'amber'
+      };
+    } else {
+      // 3. Routine groups
+      const routineGroups = ['g37', 'g38', 'g40', 'g27', 'g21'];
+      if (routineGroups.includes(data.groupId) && severity <= 3) {
+        baseUrgency = {
+          level: 'routine',
+          badge: {
+            en: 'Routine Clinic Visit',
+            ja: '通常・定期的な受診',
+            hi: 'नियमित क्लिनिक परामर्श'
+          },
+          description: {
+            en: 'Schedule a routine visit at your convenience during regular clinic consultation hours.',
+            ja: 'ご都合の良い日時に、通常の診療時間内に受診してください。',
+            hi: 'अपनी सुविधानुसार क्लिनिक के नियमित समय में डॉक्टर से परामर्श लें।'
+          },
+          color: 'blue'
+        };
+      } else {
+        // 4. Default: Within a few days
+        baseUrgency = {
+          level: 'within_few_days',
+          badge: {
+            en: 'See a Doctor Within a Few Days',
+            ja: '数日以内に医療機関を受診',
+            hi: 'कुछ दिनों के भीतर डॉक्टर को दिखाएं'
+          },
+          description: {
+            en: 'Your symptoms should be checked by a physician within 2 to 3 days. Seek sooner care if symptoms worsen.',
+            ja: '症状が続く場合は、2〜3日以内に医療機関を受診してください。悪化した場合は早めに受診してください。',
+            hi: 'लक्षणों की जांच 2-3 दिनों में डॉक्टर से कराएं। यदि समस्या बढ़े तो जल्द जाएं।'
+          },
+          color: 'emerald'
+        };
+      }
+    }
   }
 
-  const severity = typeof data.severity === 'number' ? data.severity : 5;
-  const isFeverGroup = data.groupId === 'g01' || data.groupId === 'g14';
-  const isInfant = data.ageGroup?.includes('under_3') || data.ageGroup?.includes('Infant') || data.ageGroup?.includes('乳幼児');
-  const isSenior = data.ageGroup?.includes('65+') || data.ageGroup?.includes('Senior') || data.ageGroup?.includes('高齢者');
-
-  // Rule: Age 65+ or under 3 with fever raises urgency to "See a doctor today"
-  if (isFeverGroup && (isInfant || isSenior)) {
-    return {
-      level: 'see_doctor_today',
-      badge: {
-        en: 'See a Doctor Today (High Priority)',
-        ja: '本日中に医療機関を受診（優先度高）',
-        hi: 'आज ही डॉक्टर को दिखाएं (उच्च प्राथमिकता)'
-      },
-      description: {
-        en: 'Fever in infants under 3 or seniors (65+) requires timely medical evaluation today to prevent sudden complications.',
-        ja: '乳幼児や65歳以上の高齢者の発熱は急激に重症化しやすいため、本日中の速やかな受診をお勧めします。',
-        hi: 'शिशुओं या 65 वर्ष से अधिक उम्र के बुजुर्गों में बुखार जटिलताओं से बचने के लिए आज ही डॉक्टर द्वारा देखा जाना चाहिए।'
-      },
-      color: 'amber'
-    };
+  // Evaluate urgency of any chosen group question options
+  let maxOptionRank = 0;
+  if (data.groupQuestions) {
+    for (const gq of data.groupQuestions) {
+      for (const opt of gq.selectedOptions) {
+        if (opt.urgency === 'now') maxOptionRank = Math.max(maxOptionRank, 3);
+        else if (opt.urgency === 'today') maxOptionRank = Math.max(maxOptionRank, 2);
+        else if (opt.urgency === 'days') maxOptionRank = Math.max(maxOptionRank, 1);
+      }
+    }
   }
 
-  // 2. High severity (>= 8) or severe acute onset (>= 6 with today/yesterday)
-  if (severity >= 8 || (severity >= 6 && (data.duration?.includes('today') || data.duration?.includes('hours')))) {
-    return {
-      level: 'see_doctor_today',
-      badge: {
-        en: 'See a Doctor Today',
-        ja: '本日中に医療機関を受診',
-        hi: 'आज ही डॉक्टर को दिखाएं'
-      },
-      description: {
-        en: 'Your reported discomfort is severe. Visit a clinic or hospital consultation center today during opening hours.',
-        ja: '強い症状が見られます。本日の診療時間内に医療機関を受診してください。',
-        hi: 'आपके लक्षण गंभीर हैं। कृपया आज ही क्लिनिक या अस्पताल जाएं।'
-      },
-      color: 'amber'
-    };
+  // Only raise urgency, never lower
+  if (maxOptionRank > urgencyRankMap[baseUrgency.level]) {
+    if (maxOptionRank === 3) {
+      return {
+        level: '119_now',
+        badge: {
+          en: 'Immediate 119 Call Needed',
+          ja: '直ちに119番（救急要請）',
+          hi: 'तत्काल 119 एम्बुलेंस कॉल आवश्यक'
+        },
+        description: {
+          en: 'Dangerous warning signs reported in questionnaire options. Please call 119 for an ambulance or visit emergency care immediately.',
+          ja: '問診回答で危険な兆候が確認されました。直ちに119番通報で救急車を呼ぶか、救急外来を受診してください。',
+          hi: 'प्रश्नावली में गंभीर लक्षण पाए गए हैं। कृपया तुरंत 119 पर कॉल करें या आपातकालीन चिकित्सा सहायता लें।'
+        },
+        color: 'red'
+      };
+    }
+    if (maxOptionRank === 2) {
+      return {
+        level: 'see_doctor_today',
+        badge: {
+          en: 'See a Doctor Today',
+          ja: '本日中に医療機関を受診',
+          hi: 'आज ही डॉक्टर को दिखाएं'
+        },
+        description: {
+          en: 'Your reported symptoms indicate a need for medical consultation today during clinic hours.',
+          ja: '問診項目に基づき、本日の診療時間内に医療機関を受診することをお勧めします。',
+          hi: 'आपके लक्षणों के आधार पर आज ही क्लिनिक या अस्पताल में परामर्श आवश्यक है।'
+        },
+        color: 'amber'
+      };
+    }
+    if (maxOptionRank === 1) {
+      return {
+        level: 'within_few_days',
+        badge: {
+          en: 'See a Doctor Within a Few Days',
+          ja: '数日以内に医療機関を受診',
+          hi: 'कुछ दिनों के भीतर डॉक्टर को दिखाएं'
+        },
+        description: {
+          en: 'Your symptoms should be checked by a physician within 2 to 3 days. Seek sooner care if symptoms worsen.',
+          ja: '症状が続く場合は、2〜3日以内に医療機関を受診してください。悪化した場合は早めに受診してください。',
+          hi: 'लक्षणों की जांच 2-3 दिनों में डॉक्टर से कराएं। यदि समस्या बढ़े तो जल्द जाएं।'
+        },
+        color: 'emerald'
+      };
+    }
   }
 
-  // 3. Routine groups
-  const routineGroups = ['g37', 'g38', 'g40', 'g27', 'g21'];
-  if (routineGroups.includes(data.groupId) && severity <= 3) {
-    return {
-      level: 'routine',
-      badge: {
-        en: 'Routine Clinic Visit',
-        ja: '通常・定期的な受診',
-        hi: 'नियमित क्लिनिक परामर्श'
-      },
-      description: {
-        en: 'Schedule a routine visit at your convenience during regular clinic consultation hours.',
-        ja: 'ご都合の良い日時に、通常の診療時間内に受診してください。',
-        hi: 'अपनी सुविधानुसार क्लिनिक के नियमित समय में डॉक्टर से परामर्श लें।'
-      },
-      color: 'blue'
-    };
-  }
-
-  // 4. Default: Within a few days
-  return {
-    level: 'within_few_days',
-    badge: {
-      en: 'See a Doctor Within a Few Days',
-      ja: '数日以内に医療機関を受診',
-      hi: 'कुछ दिनों के भीतर डॉक्टर को दिखाएं'
-    },
-    description: {
-      en: 'Your symptoms should be checked by a physician within 2 to 3 days. Seek sooner care if symptoms worsen.',
-      ja: '症状が続く場合は、2〜3日以内に医療機関を受診してください。悪化した場合は早めに受診してください。',
-      hi: 'लक्षणों की जांच 2-3 दिनों में डॉक्टर से कराएं। यदि समस्या बढ़े तो जल्द जाएं।'
-    },
-    color: 'emerald'
-  };
+  return baseUrgency;
 }
 
 /**
@@ -382,8 +468,33 @@ export function generateDoctorNotes(data: PatientIntakeData): GeneratedDoctorNot
   const medData = normalizeMedications(data.medications);
   const allergyData = normalizeAllergies(data.allergies);
 
+  let groupNotesJa = '';
+  let groupNotesEn = '';
+  let groupNotesHi = '';
+
+  if (data.groupQuestions && data.groupQuestions.length > 0) {
+    const jaArr: string[] = [];
+    const enArr: string[] = [];
+    const hiArr: string[] = [];
+
+    for (const gq of data.groupQuestions) {
+      if (gq.selectedOptions && gq.selectedOptions.length > 0) {
+        const jaVals = gq.selectedOptions.map((o) => o.label.ja).join('、');
+        const enVals = gq.selectedOptions.map((o) => o.label.en).join(', ');
+        const hiVals = gq.selectedOptions.map((o) => o.label.hi || o.label.en).join(', ');
+        jaArr.push(`${gq.noteLabel.ja}: ${jaVals}`);
+        enArr.push(`${gq.noteLabel.en}: ${enVals}`);
+        hiArr.push(`${gq.noteLabel.en}: ${hiVals}`);
+      }
+    }
+
+    if (jaArr.length > 0) groupNotesJa = '\n' + jaArr.join('\n');
+    if (enArr.length > 0) groupNotesEn = '\n' + enArr.join('\n');
+    if (hiArr.length > 0) groupNotesHi = '\n' + hiArr.join('\n');
+  }
+
   const noteJa = `【問診票サマリー（外国人患者）】
-主訴: ${complaintJa}${data.chiefComplaint && data.chiefComplaint !== complaintJa ? `（患者自由記述: ${data.chiefComplaint}）` : ''}
+主訴: ${complaintJa}${data.chiefComplaint && data.chiefComplaint !== complaintJa ? `（患者自由記述: ${data.chiefComplaint}）` : ''}${groupNotesJa}
 発症時期: ${durationJa}
 重症度: ${severityJa}
 年齢層: ${ageData.ja}
@@ -391,7 +502,7 @@ export function generateDoctorNotes(data: PatientIntakeData): GeneratedDoctorNot
 アレルギー・持病: ${allergyData.ja}`;
 
   const noteEn = `【Medical Intake Summary (International Patient)】
-Chief Complaint: ${complaintEn}${data.chiefComplaint && data.chiefComplaint !== complaintEn ? ` (Note: "${data.chiefComplaint}")` : ''}
+Chief Complaint: ${complaintEn}${data.chiefComplaint && data.chiefComplaint !== complaintEn ? ` (Note: "${data.chiefComplaint}")` : ''}${groupNotesEn}
 Onset & Duration: ${durationEn}
 Severity Level: ${severityEn}
 Patient Profile: ${ageData.en}
@@ -399,7 +510,7 @@ Current Medications: ${medData.en}
 Allergies & Conditions: ${allergyData.en}`;
 
   const noteHi = `【चिकित्सा परामर्श सारांश (विदेशी मरीज)】
-मुख्य समस्या: ${complaintHi}
+मुख्य समस्या: ${complaintHi}${groupNotesHi}
 प्रारंभ: ${durationHi}
 गंभीरता: ${severityHi}
 आयु वर्ग: ${ageData.hi}
