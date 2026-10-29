@@ -1319,9 +1319,18 @@ export const SYMPTOM_GROUPS: SymptomGroup[] = [
       'unintentional weight change', 'general weakness', 'undiagnosed feeling unwell'
     ],
     keywords: {
-      en: ['tiredness', 'always tired', 'chronic fatigue', 'fatigued', 'feeling unwell', 'unexplained weight change', 'loss of appetite', 'malaise', 'run down'],
-      ja: ['だるい', '倦怠感', '疲れが取れない', '体調不良', '食欲不振', '体重減少', '原因がわからない不調', '総合診療'],
-      hi: ['लगातार थकान', 'कमजोरी', 'अस्वस्थ महसूस होना', 'भूख न लगना', 'वजन घटना']
+      en: [
+        'tiredness', 'always tired', 'chronic fatigue', 'fatigued', 'feeling unwell', 'unexplained weight change', 'loss of appetite', 'malaise', 'run down',
+        'fat', 'weight gain', 'weight loss', 'obesity', 'overweight'
+      ],
+      ja: [
+        'だるい', '倦怠感', '疲れが取れない', '体調不良', '食欲不振', '体重減少', '原因がわからない不調', '総合診療',
+        '体重', '肥満'
+      ],
+      hi: [
+        'लगातार थकान', 'कमजोरी', 'अस्वस्थ महसूस होना', 'भूख न लगना', 'वजन घटना',
+        'वजन', 'मोटापा'
+      ]
     },
     primaryDept: '総合診療科',
     backupDept: '内科',

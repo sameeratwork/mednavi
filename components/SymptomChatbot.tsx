@@ -121,6 +121,7 @@ export default function SymptomChatbot() {
   const [activeNoteTab, setActiveNoteTab] = useState<'ja' | 'en' | 'hi'>('ja');
   const [reasonLanguage, setReasonLanguage] = useState<'en' | 'hi' | 'ja'>('en');
   const [noMatchNotice, setNoMatchNotice] = useState<string | null>(null);
+  const [searchingText, setSearchingText] = useState(false);
   const [copied, setCopied] = useState(false);
 
   // Reset all states
@@ -132,6 +133,7 @@ export default function SymptomChatbot() {
     setCandidateGroup(null);
     setBrowsingCategory(null);
     setNoMatchNotice(null);
+    setSearchingText(false);
     setSelectedRedFlags([]);
     setEmergencyTriggered(false);
     setEmergencyReason(null);
@@ -152,10 +154,10 @@ export default function SymptomChatbot() {
   };
 
   // Text submit handler
-  const handleTextSubmit = (e: React.FormEvent) => {
+  const handleTextSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const text = inputText.trim();
-    if (!text) return;
+    if (!text || searchingText) return;
 
     setNoMatchNotice(null);
 
@@ -172,18 +174,54 @@ export default function SymptomChatbot() {
       return;
     }
 
-    // 3. Keyword matching to symptom groups
-    const matched = findGroupByKeyword(text);
-    if (matched) {
-      setCandidateGroup(matched);
-      setCurrentStep(2); // Ask "Is it X?"
-    } else {
-      // Do NOT open a category sub-menu.
-      // Show the full category grid with the message "I couldn't match that. Please pick the closest area."
+    // 3. Keyword matching to symptom groups (instant local check)
+    const localMatch = findGroupByKeyword(text);
+    if (localMatch) {
+      setCandidateGroup(localMatch);
+      setCurrentStep(2); // Ask "Is it X?" - Never skip confirm!
+      return;
+    }
+
+    // 4. Gemini fallback: called ONLY when keyword matching finds no group
+    setSearchingText(true);
+    try {
+      const res = await fetch('/api/ai/symptom-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'check_text', text }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.isEmergency) {
+          setEmergencyReason(data.reason || 'Immediate emergency detected.');
+          setEmergencyTriggered(true);
+          return;
+        }
+        if (data.isSelfHarm) {
+          setSelfHarmTriggered(true);
+          return;
+        }
+        if (data.matchedGroup) {
+          setCandidateGroup(data.matchedGroup);
+          setCurrentStep(2); // Always show "Is it X?" confirm, never skip it!
+          return;
+        }
+      }
+
+      // If confidence < 0.6, invalid ID, or error: show full category grid with message
       setCandidateGroup(null);
       setBrowsingCategory(null);
       setNoMatchNotice("I couldn't match that. Please pick the closest area.");
       setCurrentStep(1);
+    } catch (err) {
+      console.warn('Text check error:', err);
+      setCandidateGroup(null);
+      setBrowsingCategory(null);
+      setNoMatchNotice("I couldn't match that. Please pick the closest area.");
+      setCurrentStep(1);
+    } finally {
+      setSearchingText(false);
     }
   };
 
@@ -432,11 +470,20 @@ export default function SymptomChatbot() {
                 />
                 <button
                   type="submit"
-                  disabled={!inputText.trim()}
+                  disabled={!inputText.trim() || searchingText}
                   className="absolute right-2 top-2 bottom-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-medium rounded-lg text-sm flex items-center gap-1.5 transition"
                 >
-                  <span>Find</span>
-                  <Send className="w-3.5 h-3.5" />
+                  {searchingText ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Checking...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Find</span>
+                      <Send className="w-3.5 h-3.5" />
+                    </>
+                  )}
                 </button>
               </div>
               <div className="flex justify-between items-center text-xs text-gray-500 px-1">

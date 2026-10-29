@@ -15,6 +15,7 @@ import {
   SYMPTOM_CATEGORIES
 } from '@/lib/symptomGroups';
 import { getCanonicalDepartment } from '@/lib/departments';
+import { callGeminiGroupFallback } from '@/lib/ai/geminiFallback';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,11 +42,11 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { action, text, intakeData } = body;
 
-    // Action 1: Text check (emergency, self-harm, keyword match)
+    // Action 1: Text check (emergency, self-harm, keyword match, Gemini fallback)
     if (action === 'check_text') {
       const trimmed = typeof text === 'string' ? text.trim().slice(0, 200) : '';
 
-      // Instant Emergency Check
+      // 1. Instant Emergency Check
       if (checkEmergencyTrigger(trimmed)) {
         return NextResponse.json({
           success: true,
@@ -54,7 +55,7 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      // Self-Harm / Crisis Check
+      // 2. Self-Harm / Crisis Check
       if (checkSelfHarmTrigger(trimmed)) {
         const support = getCrisisSupportResources();
         return NextResponse.json({
@@ -64,12 +65,35 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      // Keyword match to symptom group
+      // 3. Keyword match to symptom group
       const matchedGroup = findGroupByKeyword(trimmed);
+      if (matchedGroup) {
+        return NextResponse.json({
+          success: true,
+          matchedGroup,
+          method: 'keyword',
+          enteredText: trimmed
+        });
+      }
+
+      // 4. Gemini fallback: ONLY when keyword matching finds no group
+      const geminiResult = await callGeminiGroupFallback(trimmed);
+      if (geminiResult && geminiResult.group) {
+        return NextResponse.json({
+          success: true,
+          matchedGroup: geminiResult.group,
+          confidence: geminiResult.confidence,
+          method: 'gemini',
+          enteredText: trimmed
+        });
+      }
+
+      // No match, confidence below 0.6, or error
       return NextResponse.json({
         success: true,
-        matchedGroup: matchedGroup || null,
-        enteredText: trimmed
+        matchedGroup: null,
+        enteredText: trimmed,
+        noMatchMessage: "I couldn't match that. Please pick the closest area."
       });
     }
 
