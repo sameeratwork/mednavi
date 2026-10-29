@@ -55,6 +55,7 @@ import {
   GeneratedDoctorNote
 } from '@/lib/ai/symptomChatbot';
 import { getCanonicalDepartment, CanonicalDepartment } from '@/lib/departments';
+import MatchingClinicsList from './MatchingClinicsList';
 
 // Category icon mapper
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
@@ -1162,6 +1163,12 @@ export default function SymptomChatbot() {
                 </div>
               </div>
             </div>
+
+            {/* Matching Clinics List (Sequential search: canonical -> aliases -> backup + In-Code Filter) */}
+            <MatchingClinicsList
+              department={primaryDeptInfo?.ja || selectedGroup.primaryDept}
+              backupDepartment={backupDeptInfo?.ja || selectedGroup.backupDept}
+            />
 
             {/* Restart Button */}
             <div className="text-center pt-2">

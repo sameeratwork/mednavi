@@ -33,7 +33,7 @@ export const CANONICAL_DEPARTMENTS: CanonicalDepartment[] = [
     ja: '内科',
     en: 'Internal Medicine',
     romaji: 'Naika',
-    aliases: ['一般内科', '内科全般'],
+    aliases: ['一般内科', '内科全般', '漢方内科', '老年内科'],
     keywords: {
       en: ['internal medicine', 'general medicine', 'physician', 'cold', 'fever', 'chills', 'flu', 'fatigue', 'malaise', 'weakness'],
       ja: ['内科', '一般内科', '発熱', '風邪', 'かぜ', '悪寒', 'だるさ', '倦怠感'],
@@ -52,7 +52,7 @@ export const CANONICAL_DEPARTMENTS: CanonicalDepartment[] = [
       ja: ['総合診療科', '総合診療', '総合内科', '家庭医療', '原因不明', '体調不良'],
       hi: ['सामान्य चिकित्सा', 'पारिवारिक चिकित्सा', 'अस्वस्थता']
     },
-    clinicCount: 66
+    clinicCount: 2
   },
   {
     code: 'kokyuki-naika',
@@ -98,7 +98,7 @@ export const CANONICAL_DEPARTMENTS: CanonicalDepartment[] = [
     ja: '消化器内科',
     en: 'Gastroenterology',
     romaji: 'Shokaki Naika',
-    aliases: ['胃腸内科', '胃腸科', '消化器科', '内視鏡内科'],
+    aliases: ['胃腸内科', '胃腸科', '消化器科', '内視鏡内科', '肝臓内科', '消化器内視鏡科', '消化器内視鏡内科'],
     keywords: {
       en: ['gastroenterology', 'stomach', 'abdomen', 'abdominal', 'belly', 'digestion', 'nausea', 'vomiting', 'diarrhea', 'acid reflux', 'heartburn', 'gastric', 'cramps'],
       ja: ['消化器内科', '胃腸内科', '胃腸科', '胃痛', '腹痛', '吐き気', '嘔吐', '下痢', '胃もたれ', '逆流性食道炎'],
@@ -111,7 +111,7 @@ export const CANONICAL_DEPARTMENTS: CanonicalDepartment[] = [
     ja: '肛門外科',
     en: 'Proctology / Colorectal Surgery',
     romaji: 'Komon Geka',
-    aliases: ['肛門科', '肛門内科'],
+    aliases: ['肛門科', '肛門内科', '大腸・肛門外科'],
     keywords: {
       en: ['proctology', 'piles', 'hemorrhoids', 'anal', 'rectum', 'rectal', 'anus', 'anal bleeding', 'anal pain'],
       ja: ['肛門外科', '肛門科', '痔', 'いぼ痔', '切れ痔', '肛門の痛み', '肛門出血', '血便'],
@@ -137,7 +137,7 @@ export const CANONICAL_DEPARTMENTS: CanonicalDepartment[] = [
     ja: '泌尿器科',
     en: 'Urology',
     romaji: 'Hinyokika',
-    aliases: ['泌尿器'],
+    aliases: ['泌尿器', '男性泌尿器科', '腎臓・泌尿器科'],
     keywords: {
       en: ['urology', 'urinary', 'bladder', 'urine', 'urination', 'painful urination', 'blood in urine', 'frequent urination', 'prostate', 'incontinence'],
       ja: ['泌尿器科', '膀胱炎', '排尿痛', '頻尿', '血尿', '前立腺', '残尿感', 'おしっこ'],
@@ -163,7 +163,7 @@ export const CANONICAL_DEPARTMENTS: CanonicalDepartment[] = [
     ja: '婦人科',
     en: 'Gynecology',
     romaji: 'Fujinka',
-    aliases: ['産婦人科', '女性科'],
+    aliases: ['産婦人科', '女性科', '女性内科'],
     keywords: {
       en: ['gynecology', 'period', 'menstrual', 'menstruation', 'menopause', 'cramps', 'contraception', 'fertility', 'ovary', 'uterus', 'vaginal'],
       ja: ['婦人科', '産婦人科', '生理痛', '月経', '更年期', 'ピル', '子宮', '卵巣', 'おりもの', '不妊'],
@@ -176,7 +176,7 @@ export const CANONICAL_DEPARTMENTS: CanonicalDepartment[] = [
     ja: '乳腺外科',
     en: 'Breast Surgery',
     romaji: 'Nyusen Geka',
-    aliases: ['乳腺内科', '乳腺科'],
+    aliases: ['乳腺内科', '乳腺科', '乳腺・内分泌外科'],
     keywords: {
       en: ['breast', 'breast lump', 'breast pain', 'mammogram', 'mastitis', 'nipple discharge'],
       ja: ['乳腺外科', '乳腺科', '胸のしこり', '乳房', '乳腺', 'マンモグラフィ', '乳腺炎', '乳首'],
@@ -228,7 +228,7 @@ export const CANONICAL_DEPARTMENTS: CanonicalDepartment[] = [
     ja: '精神科',
     en: 'Psychiatry',
     romaji: 'Seishinka',
-    aliases: ['精神神経科'],
+    aliases: ['精神神経科', '児童精神科', '老年精神科', '神経精神科'],
     keywords: {
       en: ['psychiatry', 'depression', 'bipolar', 'hallucination', 'delusion', 'psychosis', 'schizophrenia', 'suicidal'],
       ja: ['精神科', '精神神経科', 'うつ病', '双極性障害', '幻覚', '妄想', '統合失調症'],
@@ -267,7 +267,7 @@ export const CANONICAL_DEPARTMENTS: CanonicalDepartment[] = [
     ja: '糖尿病・内分泌内科',
     en: 'Diabetology & Endocrinology',
     romaji: 'Tonyobyo Naibunpi Naika',
-    aliases: ['糖尿病内科', '内分泌内科', '代謝内科', '糖尿病・代謝内科'],
+    aliases: ['糖尿病内科', '内分泌内科', '代謝内科', '糖尿病・代謝内科', '代謝・内分泌内科', '脂質代謝内科', '内分泌代謝内科'],
     keywords: {
       en: ['diabetes', 'endocrinology', 'thyroid', 'blood sugar', 'hormone', 'hba1c', 'hyperthyroidism', 'hypothyroidism'],
       ja: ['糖尿病・内分泌内科', '糖尿病内科', '内分泌内科', '血糖値', '甲状腺', 'ホルモン', 'バセドウ病', '橋本病'],
@@ -436,7 +436,7 @@ export const CANONICAL_DEPARTMENTS: CanonicalDepartment[] = [
     ja: '耳鼻いんこう科',
     en: 'Otolaryngology / ENT',
     romaji: 'Jibiinkoka',
-    aliases: ['耳鼻咽喉科', '耳鼻科', '耳鼻いんこう'],
+    aliases: ['耳鼻咽喉科', '耳鼻科', '耳鼻いんこう', '頭頸部・耳鼻いんこう科', '小児耳鼻いんこう科'],
     keywords: {
       en: ['ent', 'ear', 'nose', 'throat', 'otolaryngology', 'hearing', 'tinnitus', 'earache', 'sinus', 'sinusitis', 'tonsil', 'loss of smell'],
       ja: ['耳鼻いんこう科', '耳鼻咽喉科', '耳鼻科', '耳鳴り', '難聴', '耳の痛み', '鼻水', '鼻づまり', '副鼻腔炎', 'のどの痛み', '咽頭痛'],
@@ -462,7 +462,7 @@ export const CANONICAL_DEPARTMENTS: CanonicalDepartment[] = [
     ja: '感染症内科',
     en: 'Infectious Diseases',
     romaji: 'Kansensho Naika',
-    aliases: ['感染症科'],
+    aliases: ['感染症科', '性感染症内科'],
     keywords: {
       en: ['infectious diseases', 'tropical disease', 'travel clinic', 'malaria', 'dengue', 'tuberculosis', 'adult vaccination', 'travel medicine'],
       ja: ['感染症内科', '感染症科', '渡航者外来', 'トラベルクリニック', '予防接種', 'マラリア', '結核'],
@@ -492,6 +492,54 @@ export const VALID_DEPARTMENTS: DepartmentInfo[] = CANONICAL_DEPARTMENTS.map((d)
   keywords: [...d.keywords.en, ...d.keywords.ja, ...d.keywords.hi, ...d.aliases]
 }));
 
+// Precomputed total clinic counts for canonical name + aliases based on departments_found.txt
+export const DEPARTMENT_TOTAL_CLINIC_COUNTS: Record<string, number> = {
+  内科: 7638,
+  総合診療科: 3,
+  呼吸器内科: 1064,
+  循環器内科: 1807,
+  心臓血管外科: 212,
+  消化器内科: 2776,
+  肛門外科: 380,
+  腎臓内科: 594,
+  泌尿器科: 843,
+  産科: 562,
+  婦人科: 1025,
+  乳腺外科: 266,
+  小児科: 2293,
+  脳神経内科: 737,
+  脳神経外科: 458,
+  精神科: 1659,
+  心療内科: 1015,
+  睡眠外来: 4,
+  '糖尿病・内分泌内科': 1475,
+  血液内科: 134,
+  '血液・腫瘍内科': 82,
+  リウマチ科: 549,
+  アレルギー科: 1430,
+  皮膚科: 2649,
+  形成外科: 651,
+  美容外科: 1446,
+  整形外科: 1688,
+  外科: 1330,
+  'ペインクリニック(麻酔科)': 466,
+  リハビリテーション科: 1296,
+  眼科: 1264,
+  耳鼻いんこう科: 1174,
+  歯科: 22950,
+  感染症内科: 173,
+  救急科: 129
+};
+
+/**
+ * Returns sum of clinicCount for canonical name and all its aliases
+ */
+export function getTotalDepartmentClinicCount(deptNameOrCode: string): number {
+  const dept = getCanonicalDepartment(deptNameOrCode);
+  if (!dept) return 0;
+  return DEPARTMENT_TOTAL_CLINIC_COUNTS[dept.ja] ?? dept.clinicCount;
+}
+
 /**
  * Checks whether text matches a keyword.
  * Uses WHOLE-WORD regex matching for Latin keywords to prevent false positives
@@ -506,20 +554,40 @@ export function matchesKeyword(text: string, keyword: string): boolean {
   // Check if keyword is pure Latin / ASCII words
   const isLatin = /^[a-z0-9\s\-]+$/i.test(kw);
   if (isLatin) {
-    // Escape special regex characters in the keyword
     const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    // Match whole word boundary
     const regex = new RegExp(`(^|[^a-zA-Z0-9])${escaped}([^a-zA-Z0-9]|$)`, 'i');
     return regex.test(text);
   } else {
-    // Non-Latin (Japanese Kanji/Kana, Devanagari Hindi) substring match
     return text.toLowerCase().includes(kw);
   }
 }
 
+interface MatchCandidate {
+  target: string;
+  dept: CanonicalDepartment;
+  isAlias: boolean;
+}
+
+// Build candidates list sorted longest-name first for substring matching
+const CANDIDATES_LONGEST_FIRST: MatchCandidate[] = (() => {
+  const list: MatchCandidate[] = [];
+  for (const dept of CANONICAL_DEPARTMENTS) {
+    list.push({ target: dept.ja, dept, isAlias: false });
+    list.push({ target: dept.en, dept, isAlias: false });
+    for (const alias of dept.aliases) {
+      list.push({ target: alias, dept, isAlias: true });
+    }
+  }
+  return list.sort((a, b) => b.target.length - a.target.length);
+})();
+
 /**
- * Validates any department string against the clinic dataset's valid departments.
- * Returns a standardized formatted label: e.g. "内科 (Internal Medicine)"
+ * Validates any department string against the canonical departments.
+ * Order:
+ * 1. Exact ja / en / alias matches first.
+ * 2. Substring matches with candidates sorted LONGEST-NAME FIRST (e.g. 循環器内科 wins over 内科).
+ * 3. Keyword matching.
+ * Returns formatted label: e.g. "内科 (Internal Medicine)"
  */
 export function validateDepartment(raw: string | undefined | null): string {
   if (!raw || typeof raw !== 'string') {
@@ -531,31 +599,33 @@ export function validateDepartment(raw: string | undefined | null): string {
   // Strip negations so "not pregnant" doesn't falsely match Obstetrics
   clean = clean.replace(/\b(not|no|never|isn't|is not)\s+(pregnant|pregnancy)\b/gi, 'not_pregnant');
   clean = clean.replace(/\b(no|not|none)\s+(allergies|allergy)\b/gi, 'no_allergies');
+  const cleanLower = clean.toLowerCase();
 
-  // 1. Exact match with canonical or alias
+  // 1. Exact ja / en / alias matches first
   for (const dept of CANONICAL_DEPARTMENTS) {
     if (
-      clean.toLowerCase() === dept.ja.toLowerCase() ||
-      clean.toLowerCase() === dept.en.toLowerCase() ||
-      dept.aliases.some((a) => a.toLowerCase() === clean.toLowerCase())
+      cleanLower === dept.ja.toLowerCase() ||
+      cleanLower === dept.en.toLowerCase() ||
+      dept.aliases.some((a) => cleanLower === a.toLowerCase())
     ) {
       return `${dept.ja} (${dept.en})`;
     }
   }
 
-  // 2. Direct substring match with Japanese official name or aliases
-  for (const dept of CANONICAL_DEPARTMENTS) {
-    if (clean.includes(dept.ja) || dept.aliases.some((a) => clean.includes(a))) {
-      return `${dept.ja} (${dept.en})`;
+  // 2. Substring matches sorted LONGEST-NAME FIRST (so 循環器内科 wins over 内科)
+  for (const cand of CANDIDATES_LONGEST_FIRST) {
+    const candLower = cand.target.toLowerCase();
+    if (cleanLower.includes(candLower)) {
+      return `${cand.dept.ja} (${cand.dept.en})`;
     }
   }
 
   // 3. Whole-word Latin / substring Japanese keyword matching
-  for (const dept of CANONICAL_DEPARTMENTS) {
-    const allKw = [...dept.keywords.en, ...dept.keywords.ja, ...dept.keywords.hi];
+  for (const cand of CANDIDATES_LONGEST_FIRST) {
+    const allKw = [...cand.dept.keywords.en, ...cand.dept.keywords.ja, ...cand.dept.keywords.hi];
     for (const kw of allKw) {
       if (matchesKeyword(clean, kw)) {
-        return `${dept.ja} (${dept.en})`;
+        return `${cand.dept.ja} (${cand.dept.en})`;
       }
     }
   }
@@ -565,19 +635,36 @@ export function validateDepartment(raw: string | undefined | null): string {
 }
 
 /**
- * Extracts the canonical Japanese department name for DB querying
- * e.g. "内科 (Internal Medicine)" -> "内科"
+ * Extracts the canonical Japanese department name for DB querying.
+ * Order:
+ * 1. Exact ja / en / alias match first.
+ * 2. Substring match sorted LONGEST-NAME FIRST (so 循環器内科 wins over 内科).
+ * e.g. "循環器内科 (Cardiology)" -> "循環器内科", "内科" -> "内科"
  */
 export function getJapaneseDepartmentName(dept: string): string {
   if (!dept) return '内科';
-  const found = CANONICAL_DEPARTMENTS.find(
-    (d) =>
-      dept.includes(d.ja) ||
-      dept.toLowerCase().includes(d.en.toLowerCase()) ||
-      d.aliases.some((a) => dept.includes(a))
-  );
-  if (found) return found.ja;
-  return dept.split(/[\s(（]/)[0].trim() || '内科';
+  const target = dept.trim();
+  const targetLower = target.toLowerCase();
+
+  // 1. Exact ja / en / alias match first
+  for (const d of CANONICAL_DEPARTMENTS) {
+    if (
+      targetLower === d.ja.toLowerCase() ||
+      targetLower === d.en.toLowerCase() ||
+      d.aliases.some((a) => targetLower === a.toLowerCase())
+    ) {
+      return d.ja;
+    }
+  }
+
+  // 2. Substring match sorted LONGEST-NAME FIRST
+  for (const cand of CANDIDATES_LONGEST_FIRST) {
+    if (targetLower.includes(cand.target.toLowerCase())) {
+      return cand.dept.ja;
+    }
+  }
+
+  return target.split(/[\s(（]/)[0].trim() || '内科';
 }
 
 /**
