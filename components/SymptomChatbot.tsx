@@ -1034,28 +1034,28 @@ export default function SymptomChatbot() {
         {currentStep === 9 && selectedGroup && urgencyResult && doctorNotes && (
           <div className="space-y-6 max-w-3xl mx-auto">
             {/* Top Banner: Department Match */}
-            <div className="bg-linear-to-r from-blue-900 to-indigo-900 text-white rounded-2xl p-6 shadow-md">
+            <div className="bg-linear-to-r from-blue-900 to-indigo-900 rounded-2xl p-6 shadow-md border border-slate-200">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <span className="text-xs uppercase font-bold tracking-wider text-blue-200">
+                  <span className="text-xs uppercase font-bold tracking-wider text-slate-500">
                     Recommended Medical Department (推奨診療科)
                   </span>
-                  <h3 className="text-2xl sm:text-3xl font-extrabold mt-1 font-japanese">
+                  <h3 className="text-2xl sm:text-3xl font-extrabold mt-1 font-japanese text-slate-900">
                     {primaryDeptInfo?.ja || selectedGroup.primaryDept}
                   </h3>
-                  <p className="text-blue-200 text-sm font-medium mt-0.5">
+                  <p className="text-slate-700 text-sm font-medium mt-0.5">
                     {primaryDeptInfo?.romaji && `${primaryDeptInfo.romaji} • `}
                     {primaryDeptInfo?.en || selectedGroup.primaryDept}
                   </p>
                 </div>
 
                 {backupDeptInfo && (
-                  <div className="bg-white/10 backdrop-blur-2xs border border-white/20 rounded-xl p-3 sm:text-right">
-                    <span className="text-2xs text-blue-200 uppercase font-bold tracking-wider block">
+                  <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-3 sm:text-right">
+                    <span className="text-2xs text-slate-500 uppercase font-bold tracking-wider block">
                       Backup Specialty (代替診療科)
                     </span>
-                    <span className="font-bold text-sm font-japanese">{backupDeptInfo.ja}</span>
-                    <span className="text-xs text-blue-200 block">{backupDeptInfo.en}</span>
+                    <span className="font-bold text-sm font-japanese text-slate-600">{backupDeptInfo.ja}</span>
+                    <span className="text-xs text-slate-600 block">{backupDeptInfo.en}</span>
                   </div>
                 )}
               </div>
@@ -1142,7 +1142,7 @@ export default function SymptomChatbot() {
                 </pre>
 
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-slate-600">
                     💡 Show the Japanese tab on your phone directly to the clinic receptionist or doctor.
                   </p>
                   <button
@@ -1174,7 +1174,7 @@ export default function SymptomChatbot() {
             <div className="text-center pt-2">
               <button
                 onClick={handleReset}
-                className="inline-flex items-center gap-2 text-xs font-medium text-gray-500 hover:text-gray-800 transition"
+                className="inline-flex items-center gap-2 text-xs font-medium text-slate-600 hover:text-slate-900 transition"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 Check another symptom or start over
