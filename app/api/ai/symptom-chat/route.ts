@@ -1,13 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkRateLimit } from '@/lib/rateLimit';
-import { processSymptomChat, ChatTurnMessage } from '@/lib/ai/symptomChatbot';
+import {
+  checkEmergencyTrigger,
+  checkSelfHarmTrigger,
+  getCrisisSupportResources,
+  evaluateUrgency,
+  generateDoctorNotes,
+  PatientIntakeData
+} from '@/lib/ai/symptomChatbot';
+import {
+  findGroupByKeyword,
+  getGroupById,
+  SYMPTOM_GROUPS,
+  SYMPTOM_CATEGORIES
+} from '@/lib/symptomGroups';
+import { getCanonicalDepartment } from '@/lib/departments';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. IP Rate Limiting: 30 requests per minute
-    const rateCheck = checkRateLimit(req, 30, 60 * 1000);
+    // 1. IP Rate Limiting: 60 requests per minute
+    const rateCheck = checkRateLimit(req, 60, 60 * 1000);
     if (!rateCheck.allowed) {
       return NextResponse.json(
         {
@@ -25,38 +39,67 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { history, step } = body;
+    const { action, text, intakeData } = body;
 
-    if (!Array.isArray(history)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid history parameter provided.' },
-        { status: 400 }
-      );
+    // Action 1: Text check (emergency, self-harm, keyword match)
+    if (action === 'check_text') {
+      const trimmed = typeof text === 'string' ? text.trim().slice(0, 200) : '';
+
+      // Instant Emergency Check
+      if (checkEmergencyTrigger(trimmed)) {
+        return NextResponse.json({
+          success: true,
+          isEmergency: true,
+          reason: 'Emergency symptoms detected requiring immediate attention.'
+        });
+      }
+
+      // Self-Harm / Crisis Check
+      if (checkSelfHarmTrigger(trimmed)) {
+        const support = getCrisisSupportResources();
+        return NextResponse.json({
+          success: true,
+          isSelfHarm: true,
+          support
+        });
+      }
+
+      // Keyword match to symptom group
+      const matchedGroup = findGroupByKeyword(trimmed);
+      return NextResponse.json({
+        success: true,
+        matchedGroup: matchedGroup || null,
+        enteredText: trimmed
+      });
     }
 
-    // 2. Message length limit: max 500 characters per message
-    const validatedHistory: ChatTurnMessage[] = history.map((m: any) => {
-      const content = typeof m.content === 'string' ? m.content.trim() : '';
-      return {
-        role: m.role === 'assistant' ? 'assistant' : 'user',
-        content: content.slice(0, 500),
-      };
-    });
+    // Action 2: Generate final result (Department, Backup, Urgency, Trilingual Note)
+    if (action === 'generate_result') {
+      const data: PatientIntakeData = intakeData || {};
+      const group = getGroupById(data.groupId);
 
-    const currentStep = typeof step === 'number' ? Math.max(1, Math.min(step, 8)) : 1;
+      if (!group) {
+        return NextResponse.json({ success: false, error: 'Invalid group ID' }, { status: 400 });
+      }
 
-    // 3. Process chatbot turn
-    const result = await processSymptomChat(validatedHistory, currentStep);
+      const primaryDept = getCanonicalDepartment(group.primaryDept);
+      const backupDept = group.backupDept ? getCanonicalDepartment(group.backupDept) : undefined;
+      const urgency = evaluateUrgency(data, group);
+      const notes = generateDoctorNotes(data);
 
-    return NextResponse.json({
-      success: true,
-      ...result,
-    });
+      return NextResponse.json({
+        success: true,
+        group,
+        primaryDept: primaryDept || { ja: group.primaryDept, en: group.primaryDept, romaji: '', clinicCount: 0 },
+        backupDept: backupDept || null,
+        urgency,
+        notes
+      });
+    }
+
+    return NextResponse.json({ success: false, error: 'Unknown action' }, { status: 400 });
   } catch (error: any) {
-    console.error('Error in symptom-chat API route:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Symptom chatbot error:', error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
