@@ -1,414 +1,521 @@
-import { callLlmChatDetailed, ChatMessage } from './client';
-import { VALID_DEPARTMENTS, validateDepartment } from '../departments';
+/**
+ * Symptom Chatbot Engine (No-AI Core)
+ *
+ * Handles:
+ * - Instant multilingual emergency checks (EN / JA / HI)
+ * - Immediate self-harm & mental crisis detection with TELL Lifeline & 119 resources
+ * - Group keyword matching
+ * - Code-based urgency evaluation (119 now / see doctor today / within a few days / routine)
+ * - Multilingual doctor intake note generation with medicine/allergy normalization
+ */
 
-export interface ChatTurnMessage {
-  role: 'user' | 'assistant';
-  content: string;
+import { CANONICAL_DEPARTMENTS, matchesKeyword } from '../departments';
+import {
+  SYMPTOM_GROUPS,
+  SymptomGroup,
+  findGroupByKeyword,
+  getGroupById
+} from '../symptomGroups';
+import { EMERGENCY_NUMBERS } from '../emergencyNumbers';
+
+export interface AnsweredGroupQuestion {
+  questionId: string;
+  noteLabel: { ja: string; en: string };
+  selectedOptions: {
+    id: string;
+    label: { ja: string; en: string; hi: string };
+    urgency?: 'now' | 'today' | 'days';
+    useBackupDept?: boolean;
+  }[];
 }
 
-export interface SymptomChatResult {
-  done: boolean;
-  emergency: boolean;
-  message?: string;
-  step?: number;
-  quickChips?: string[];
-  department?: string;
-  backupDepartment?: string;
-  reason?: string;
-  noteEn?: string;
-  noteJa?: string;
-  fallbackNotice?: string;
+export interface PatientIntakeData {
+  groupId: string;
+  chiefComplaint?: string;
+  duration?: string;
+  severity?: number;
+  ageGroup?: string;
+  isPregnant?: string;
+  medications?: string;
+  allergies?: string;
+  checkedRedFlags?: string[];
+  groupQuestions?: AnsweredGroupQuestion[];
 }
 
-// Emergency red flag phrases that require immediate 119 ambulance triage
-const EMERGENCY_KEYWORDS = [
-  'chest pain',
-  'chest pressure',
-  'tightness in chest',
-  'heart attack',
-  'cannot breathe',
-  'difficulty breathing',
-  'shortness of breath',
-  'suffocating',
-  'choking',
-  'unconscious',
-  'passed out',
-  'fainted',
-  'slurred speech',
-  'face drooping',
-  'sudden paralysis',
-  'arm weakness',
-  'coughing blood',
-  'vomiting blood',
-  'severe bleeding',
-  'worst headache of my life',
-  'anaphylaxis',
-  'throat closing',
-  'blue lips',
-  'cyanosis'
-];
+export type UrgencyLevel = '119_now' | 'see_doctor_today' | 'within_few_days' | 'routine';
+
+export interface UrgencyInfo {
+  level: UrgencyLevel;
+  badge: {
+    en: string;
+    ja: string;
+    hi: string;
+  };
+  description: {
+    en: string;
+    ja: string;
+    hi: string;
+  };
+  color: string;
+}
+
+export interface GeneratedDoctorNote {
+  noteJa: string;
+  noteEn: string;
+  noteHi: string;
+}
+
+// ── Emergency Words (Ambulance 119) ──────────────────────────────────────────
+export const EMERGENCY_PHRASES = {
+  en: [
+    'chest pain', 'chest pressure', 'cannot breathe', 'difficulty breathing',
+    'shortness of breath', 'suffocating', 'choking', 'unconscious', 'passed out',
+    'fainted', 'slurred speech', 'face drooping', 'arm weakness', 'sudden paralysis',
+    'coughing blood', 'vomiting blood', 'severe bleeding', 'worst headache of my life',
+    'anaphylaxis', 'blue lips', 'cyanosis', 'heart attack', 'stroke'
+  ],
+  ja: [
+    '胸の激痛', '胸が痛い', '呼吸困難', '息ができない', '意識不明', '気を失った',
+    '倒れた', '大量出血', '激しい出血', '吐血', '喀血', '血を吐いた', '激しい頭痛',
+    'ろれつが回らない', '半身麻痺', '顔が下がる', '窒息', 'アナフィラキシー'
+  ],
+  hi: [
+    'सीने में तेज दर्द', 'सांस नहीं आ रही', 'सांस लेने में भारी तकलीफ', 'बेहोश',
+    'खून की उल्टी', 'खांसी में खून', 'तेज खून बहना', 'चेहरा लटकना', 'लकवा', 'दम घुटना'
+  ]
+};
+
+// ── Self-Harm / Crisis Words ────────────────────────────────────────────────
+export const SELF_HARM_PHRASES = {
+  en: [
+    'suicide', 'kill myself', 'end my life', 'want to die', 'self harm',
+    'cutting myself', 'hurting myself', 'take my own life'
+  ],
+  ja: [
+    '死にたい', '自殺', '命を絶ちたい', '消えたい', '自傷', '自分を傷つけ'
+  ],
+  hi: [
+    'आत्महत्या', 'खुद को मारना', 'जान देना', 'मरना चाहता', 'मरना चाहती', 'खुदकुशी'
+  ]
+};
+
+export const NO_MATCH_MESSAGE = "I couldn't match that. Please pick the closest area.";
 
 /**
- * Checks for immediate emergency phrases in user messages
+ * Matches input text against symptom groups using keyword ranking
+ */
+export function matchSymptomText(text: string): {
+  matchedGroup?: SymptomGroup;
+  noMatchMessage?: string;
+} {
+  const matched = findGroupByKeyword(text);
+  if (!matched) {
+    return { noMatchMessage: NO_MATCH_MESSAGE };
+  }
+  return { matchedGroup: matched };
+}
+
+/**
+ * Checks for immediate emergency words
  */
 export function checkEmergencyTrigger(text: string): boolean {
-  const lower = text.toLowerCase();
-  return EMERGENCY_KEYWORDS.some((kw) => lower.includes(kw));
-}
+  if (!text) return false;
+  const input = text.trim();
 
-/**
- * Fixed question sequence for the symptom checker (max 7-8 steps)
- * Asked directly without calling the AI to preserve strict rate limits.
- */
-export const FIXED_QUESTIONS = [
-  {
-    step: 1,
-    question:
-      'Hello! I am your Japanese Healthcare Navigation Assistant. I will ask you a few brief questions to help determine which medical department in Japan you should visit, and prepare an authentic bilingual doctor note for clinic reception. To start, what is the main symptom or problem you are experiencing today?',
-    quickChips: [
-      'Fever & Chills',
-      'Stomach Ache & Nausea',
-      'Sore Throat & Cough',
-      'Headache & Dizziness',
-      'Skin Rash & Itch',
-      'Joint or Muscle Pain'
-    ]
-  },
-  {
-    step: 2,
-    question: 'When did these symptoms first start (e.g. today, 2-3 days ago, over a week)?',
-    quickChips: ['Today', 'Yesterday', '2-3 days ago', 'About a week ago', 'More than 2 weeks']
-  },
-  {
-    step: 3,
-    question: 'On a scale from 1 (very mild) to 10 (unbearable), how severe is your pain or discomfort?',
-    quickChips: ['1 (Very Mild)', '3 (Mild)', '5 (Moderate)', '7 (Severe)', '9 (Very Severe)']
-  },
-  {
-    step: 4,
-    question: 'Are you experiencing any other symptoms along with this (such as fever, nausea, fatigue, or cough)?',
-    quickChips: ['Fatigue', 'Loss of appetite', 'Nausea', 'Body aches', 'None']
-  },
-  {
-    step: 5,
-    question: 'Could you share your approximate age group, and if applicable, whether you are currently pregnant?',
-    quickChips: ['Adult (18-64)', 'Child / Infant', 'Senior (65+)', 'Currently Pregnant', 'Not Pregnant']
-  },
-  {
-    step: 6,
-    question: 'Have you taken any medications or remedies for this so far? (You can skip this if none)',
-    quickChips: ['None / Skip', 'Paracetamol / Dolo', 'Painkillers', 'Antibiotics']
-  },
-  {
-    step: 7,
-    question: 'Do you have any known drug allergies or ongoing health conditions? (You can skip this if none)',
-    quickChips: ['None / Skip', 'Penicillin', 'NSAIDs / Aspirin', 'Food allergies']
+  for (const phrase of EMERGENCY_PHRASES.en) {
+    if (matchesKeyword(input, phrase)) return true;
   }
-];
-
-export function getStepQuickChips(step: number): string[] {
-  const item = FIXED_QUESTIONS.find((q) => q.step === step);
-  return item ? item.quickChips : ['Ready for recommendation'];
-}
-
-// Common disease/diagnosis names to detect when user names a diagnosis instead of symptoms
-const DIAGNOSIS_KEYWORDS = [
-  'diabetes',
-  'asthma',
-  'hypertension',
-  'high blood pressure',
-  'cancer',
-  'covid',
-  'coronavirus',
-  'pneumonia',
-  'bronchitis',
-  'appendicitis',
-  'gastritis',
-  'ulcer',
-  'hernia',
-  'glaucoma',
-  'hepatitis',
-  'depression',
-  'adhd',
-  'bipolar',
-  'migraine',
-  'arthritis',
-  'eczema',
-  'psoriasis',
-  'tuberculosis',
-  'flu',
-  'influenza',
-  'strep',
-  'strep throat',
-  'gout',
-  'kidney stone',
-  'gallstone',
-  'anemia',
-  'thyroid'
-];
-
-/**
- * Checks whether user response gave a diagnosis instead of symptoms, or is too vague/unclear
- */
-function isDiagnosisOrUnclear(text: string, step: number): boolean {
-  if (step !== 1 && step !== 4) return false;
-  const t = text.trim().toLowerCase();
-
-  // Very short or vague answers
-  if (t.length < 3 || /^(idk|dont know|don't know|yes|no|\?+|\.+|help|sick)$/i.test(t)) {
-    return true;
+  for (const phrase of EMERGENCY_PHRASES.ja) {
+    if (input.includes(phrase)) return true;
   }
-
-  // Explicit diagnosis phrases
-  if (/\b(i have|i've got|diagnosed with|i think i have|my disease is|my diagnosis is)\b/i.test(t)) {
-    return true;
-  }
-
-  // Known disease names given without physical sensation keywords
-  if (DIAGNOSIS_KEYWORDS.some((kw) => t.includes(kw))) {
-    const symptomTerms = ['pain', 'fever', 'ache', 'hurts', 'cough', 'swollen', 'rash', 'bleed', 'vomit', 'dizzy', 'nausea', 'chill', 'sore'];
-    const hasSymptom = symptomTerms.some((st) => t.includes(st));
-    if (!hasSymptom) return true;
+  for (const phrase of EMERGENCY_PHRASES.hi) {
+    if (input.includes(phrase)) return true;
   }
 
   return false;
 }
 
 /**
- * Calls AI for a targeted clarifying follow-up when user answers with a diagnosis or unclear text
+ * Checks for self-harm or suicidal ideation
  */
-async function generateClarificationFollowUp(userText: string): Promise<string> {
-  const prompt = `The user was asked for their symptoms at a medical clinic intake in Japan, but they replied with: "${userText}".
-This appears to be a named diagnosis/disease or an unclear response rather than physical symptoms.
-In 1 to 2 friendly, polite sentences, ask them what specific physical symptoms or discomforts they are actually experiencing right now (for example: pain location, fever, swelling, cough, dizziness) so we can navigate them to the right Japanese clinic department.`;
+export function checkSelfHarmTrigger(text: string): boolean {
+  if (!text) return false;
+  const input = text.trim();
 
-  try {
-    const res = await callLlmChatDetailed(
-      [
-        { role: 'system', content: 'You are a Japanese healthcare intake navigator. Ask the patient for their physical symptoms.' },
-        { role: 'user', content: prompt }
-      ],
-      { temperature: 0.3 }
-    );
-
-    if (res.content && res.content.trim()) {
-      return res.content.trim();
-    }
-  } catch (e) {
-    console.warn('AI clarification call failed:', e);
+  for (const phrase of SELF_HARM_PHRASES.en) {
+    if (matchesKeyword(input, phrase)) return true;
+  }
+  for (const phrase of SELF_HARM_PHRASES.ja) {
+    if (input.includes(phrase)) return true;
+  }
+  for (const phrase of SELF_HARM_PHRASES.hi) {
+    if (input.includes(phrase)) return true;
   }
 
-  return `To help connect you to the right department, could you describe what specific physical symptoms or discomfort you are experiencing right now (such as fever, pain, cough, or nausea), rather than a diagnosis?`;
+  return false;
 }
 
 /**
- * Main function to process symptom chat turn
+ * Returns crisis support information (TELL Lifeline & 119)
  */
-export async function processSymptomChat(
-  history: ChatTurnMessage[],
-  currentStep: number
-): Promise<SymptomChatResult> {
-  const latestUserMessage = history
-    .filter((m) => m.role === 'user')
-    .slice(-1)[0]?.content || '';
-
-  // 1. Immediate emergency check (no LLM needed)
-  if (checkEmergencyTrigger(latestUserMessage)) {
-    return {
-      done: true,
-      emergency: true,
-      reason: 'Critical symptoms detected that require immediate emergency evaluation via 119.'
-    };
-  }
-
-  // 2. Intercept unclear answers or named diagnoses (Calls AI only for follow-up if unclear)
-  if (isDiagnosisOrUnclear(latestUserMessage, currentStep)) {
-    const followUp = await generateClarificationFollowUp(latestUserMessage);
-    return {
-      done: false,
-      emergency: false,
-      message: followUp,
-      step: currentStep, // keep on current question until clarified
-      quickChips: getStepQuickChips(currentStep)
-    };
-  }
-
-  // 3. Fixed question progression (NO AI calls during steps 1 through 6)
-  if (currentStep < 7) {
-    const nextStep = currentStep + 1;
-    const fixedQ = FIXED_QUESTIONS.find((q) => q.step === nextStep) || FIXED_QUESTIONS[1];
-    return {
-      done: false,
-      emergency: false,
-      message: fixedQ.question,
-      step: nextStep,
-      quickChips: fixedQ.quickChips
-    };
-  }
-
-  // 4. CONCLUSION STEP: All 7 questions answered. Call the LLM ONCE at the end.
-  const deptListStr = VALID_DEPARTMENTS.map((d) => `${d.ja} (${d.en})`).join(', ');
-
-  const systemPrompt = `
-You are MedNavi's friendly, reassuring Japanese Healthcare Navigator.
-You help foreign residents in Japan navigate the Japanese clinic system.
-
-CRITICAL MEDICAL & SAFETY RULES:
-1. NEVER DIAGNOSE. Never tell the patient what illness they have or might have (no "you might have appendicitis", "you have flu", etc.).
-2. You ONLY assess symptom characteristics to recommend the appropriate Japanese medical department to visit.
-3. If the user mentions emergency signs (chest pain, severe breathing difficulty, slurred speech, unconsciousness, severe sudden numbness), immediately set "emergency": true.
-4. VALID CLINIC DEPARTMENTS: You MUST select the department and backupDepartment from this real Japanese medical department list:
-   ${deptListStr}
-
-RESPONSE FORMAT:
-You must respond in valid JSON ONLY with this structure:
-{
-  "emergency": false,
-  "department": "Exact department from list, e.g. 内科 (Internal Medicine)",
-  "backupDepartment": "Exact backup department from list, e.g. 消化器内科 (Gastroenterology)",
-  "reason": "Brief, patient-friendly explanation of why this department is suitable (NON-DIAGNOSTIC, e.g. 'To evaluate persistent high fever and throat inflammation...')",
-  "noteEn": "Comprehensive English intake summary: main complaint, onset, severity, associated symptoms, meds, allergies.",
-  "noteJa": "【問診票サマリー（外国人患者）】\\n■ 主訴：...\\n■ 現病歴・発症時期：...\\n■ 症状の強さ：10段階中【...】\\n■ 随伴症状：...\\n■ 服用中の薬：...\\n■ アレルギー：...\\n■ 配慮事項：日本語が不慣れなため、英語またはやさしい日本語での診療をお願い申し上げます。"
+export function getCrisisSupportResources() {
+  const tell = EMERGENCY_NUMBERS.find((n) => n.id === 'tell-lifeline');
+  const ambulance = EMERGENCY_NUMBERS.find((n) => n.id === 'ambulance-119');
+  return { tell, ambulance };
 }
-`;
 
-  const messagesForLlm: ChatMessage[] = [
-    { role: 'system', content: systemPrompt },
-    ...history.map((h) => ({
-      role: h.role,
-      content: h.content
-    }))
-  ];
+// ── Common Medicine & Allergy Normalization Lookups ──────────────────────────
+export const MEDICINE_LOOKUP: Record<string, { ja: string; en: string }> = {
+  paracetamol: { ja: 'アセトアミノフェン', en: 'Acetaminophen / Paracetamol' },
+  dolo: { ja: 'アセトアミノフェン（Dolo）', en: 'Acetaminophen (Dolo)' },
+  crocin: { ja: 'アセトアミノフェン（Crocin）', en: 'Acetaminophen (Crocin)' },
+  calonal: { ja: 'カロナール（アセトアミノフェン）', en: 'Calonal (Acetaminophen)' },
+  カロナール: { ja: 'カロナール（アセトアミノフェン）', en: 'Calonal (Acetaminophen)' },
+  loxonin: { ja: 'ロキソニン（ロキソプロフェン）', en: 'Loxonin (Loxoprofen)' },
+  ロキソニン: { ja: 'ロキソニン（ロキソプロフェン）', en: 'Loxonin (Loxoprofen)' },
+  loxoprofen: { ja: 'ロキソプロフェン', en: 'Loxoprofen' },
+  ibuprofen: { ja: 'イブプロフェン', en: 'Ibuprofen' },
+  イブプロフェン: { ja: 'イブプロフェン', en: 'Ibuprofen' },
+  advil: { ja: 'イブプロフェン（Advil）', en: 'Ibuprofen (Advil)' },
+  motrin: { ja: 'イブプロフェン（Motrin）', en: 'Ibuprofen (Motrin)' },
+  eve: { ja: 'イブプロフェン（EVE）', en: 'Ibuprofen (EVE)' }
+};
 
-  try {
-    const llmCall = await callLlmChatDetailed(messagesForLlm, {
-      jsonMode: true,
-      temperature: 0.2
-    });
+export const ALLERGY_LOOKUP: Record<string, { ja: string; en: string }> = {
+  penicillin: { ja: 'ペニシリン', en: 'Penicillin' },
+  ペニシリン: { ja: 'ペニシリン', en: 'Penicillin' },
+  aspirin: { ja: 'アスピリン', en: 'Aspirin' },
+  アスピリン: { ja: 'アスピリン', en: 'Aspirin' },
+  nsaids: { ja: '非ステロイド性抗炎症薬 (NSAIDs)', en: 'NSAIDs' },
+  nsaid: { ja: '非ステロイド性抗炎症薬 (NSAIDs)', en: 'NSAIDs' },
+  sulfa: { ja: 'サルファ剤', en: 'Sulfa antibiotics' },
+  antibiotics: { ja: '抗生物質', en: 'Antibiotics' }
+};
 
-    if (llmCall.isRateLimited) {
-      console.warn('LLM 429 rate limit reached after retry. Falling back to clinical rules.');
-      const fallback = executeRuleBasedFallback(history);
+/**
+ * Normalizes user-entered medicine strings with authentic Japanese medical names
+ */
+export function normalizeMedications(input?: string): { ja: string; en: string; hi: string } {
+  if (!input || !input.trim() || /^(none|no|nil|なし|ない|नहीं|skip)$/i.test(input.trim())) {
+    return { ja: '特になし', en: 'None reported', hi: 'कोई नहीं' };
+  }
+
+  const raw = input.trim();
+  const lower = raw.toLowerCase();
+
+  for (const [key, val] of Object.entries(MEDICINE_LOOKUP)) {
+    if (lower.includes(key)) {
       return {
-        ...fallback,
-        fallbackNotice: 'AI is busy, showing a basic suggestion'
+        ja: `${val.ja}（患者記載: ${raw}）`,
+        en: `${val.en} (as reported: ${raw})`,
+        hi: `${val.en} (${raw})`
       };
     }
-
-    if (llmCall.content) {
-      const parsed = JSON.parse(llmCall.content);
-
-      if (parsed.emergency === true) {
-        return {
-          done: true,
-          emergency: true,
-          reason: parsed.reason || 'Symptoms indicate urgent attention is required.'
-        };
-      }
-
-      if (parsed.department) {
-        const validatedDept = validateDepartment(parsed.department);
-        const validatedBackup = validateDepartment(parsed.backupDepartment || '内科 (Internal Medicine)');
-
-        return {
-          done: true,
-          emergency: false,
-          department: validatedDept,
-          backupDepartment: validatedBackup,
-          reason: parsed.reason || 'Recommended based on your reported symptoms.',
-          noteEn: parsed.noteEn || buildRuleBasedNoteEn(history),
-          noteJa: parsed.noteJa || buildRuleBasedNoteJa(history)
-        };
-      }
-    }
-  } catch (err) {
-    console.warn('LLM call failed or unparseable, executing clinical heuristic fallback:', err);
   }
 
-  // 5. Robust Rule-Based Fallback Engine
-  return executeRuleBasedFallback(history);
+  // Free-text stays as typed
+  return { ja: raw, en: raw, hi: raw };
 }
 
 /**
- * High-quality deterministic clinical fallback engine
+ * Normalizes user-entered allergy strings
  */
-function executeRuleBasedFallback(
-  history: ChatTurnMessage[]
-): SymptomChatResult {
-  const userMessages = history.filter((m) => m.role === 'user').map((m) => m.content);
-  const combinedUserText = userMessages.join(' ');
-
-  // Emergency check on full history
-  if (checkEmergencyTrigger(combinedUserText)) {
-    return {
-      done: true,
-      emergency: true,
-      reason: 'Critical symptoms detected that require immediate 119 emergency evaluation.'
-    };
+export function normalizeAllergies(input?: string): { ja: string; en: string; hi: string } {
+  if (!input || !input.trim() || /^(none|no|nil|なし|ない|特になし|नहीं|skip)$/i.test(input.trim())) {
+    return { ja: '特になし', en: 'None reported', hi: 'कोई नहीं' };
   }
 
-  const primaryComplaint = userMessages[0] || '';
-  const ageProfile = userMessages[4] || '';
-  let validatedDept = validateDepartment(primaryComplaint);
+  const raw = input.trim();
+  const lower = raw.toLowerCase();
 
-  // If age profile explicitly mentions child/infant/pediatric, route to Pediatrics
-  if (/child|baby|infant|pediatric|toddler|kid/i.test(ageProfile)) {
-    validatedDept = '小児科 (Pediatrics)';
-  } else if (validatedDept === '内科 (Internal Medicine)' && userMessages[3]) {
-    // Check associated symptoms
-    const associatedDept = validateDepartment(userMessages[3]);
-    if (associatedDept !== '内科 (Internal Medicine)') {
-      validatedDept = associatedDept;
+  for (const [key, val] of Object.entries(ALLERGY_LOOKUP)) {
+    if (lower.includes(key)) {
+      return {
+        ja: `${val.ja}（患者記載: ${raw}）`,
+        en: `${val.en} (as reported: ${raw})`,
+        hi: `${val.en} (${raw})`
+      };
     }
   }
 
-  let backupDept = '内科 (Internal Medicine)';
-  if (validatedDept.includes('小児科')) {
-    backupDept = '耳鼻いんこう科 (Otolaryngology / ENT)';
-  } else if (validatedDept.includes('消化器')) {
-    backupDept = '内科 (Internal Medicine)';
-  } else if (validatedDept.includes('皮膚科')) {
-    backupDept = 'アレルギー科 (Allergology)';
-  } else if (validatedDept.includes('耳鼻')) {
-    backupDept = '呼吸器内科 (Respiratory / Pulmonology)';
-  } else if (validatedDept.includes('内科')) {
-    backupDept = '総合診療科 (General Practice)';
-  }
+  // Free-text stays as typed
+  return { ja: raw, en: raw, hi: raw };
+}
+
+/**
+ * Normalizes age and pregnancy
+ */
+export function normalizeAgeAndPregnancy(
+  ageGroup?: string,
+  isPregnant?: string
+): { ja: string; en: string; hi: string } {
+  const age = ageGroup || '大人（18〜64歳） / Adult (18-64)';
+  const pregnant = isPregnant && isPregnant !== 'not_pregnant' && isPregnant !== 'No'
+    ? '【現在妊娠中 / Currently Pregnant】'
+    : '';
 
   return {
-    done: true,
-    emergency: false,
-    department: validatedDept,
-    backupDepartment: backupDept,
-    reason: `Based on your symptoms (${primaryComplaint || 'reported condition'}), visiting ${validatedDept} will allow appropriate medical examination.`,
-    noteEn: buildRuleBasedNoteEn(history),
-    noteJa: buildRuleBasedNoteJa(history)
+    ja: `${age}${pregnant ? ` ${pregnant}` : ''}`,
+    en: `${age}${pregnant ? ' (Currently pregnant)' : ''}`,
+    hi: `${age}${pregnant ? ' (वर्तमान में गर्भवती)' : ''}`
   };
 }
 
-function buildRuleBasedNoteEn(history: ChatTurnMessage[]): string {
-  const userMessages = history.filter((m) => m.role === 'user').map((m) => m.content);
-  return `**Symptom Summary for Consultation:**
-- **Primary Complaint:** ${userMessages[0] || 'Unspecified symptom'}
-- **Onset / Duration:** ${userMessages[1] || 'Recently reported'}
-- **Reported Severity:** ${userMessages[2] || 'Moderate'}
-- **Associated Symptoms:** ${userMessages[3] || 'None reported'}
-- **Age / Profile:** ${userMessages[4] || 'Adult'}
-- **Medications Taken:** ${userMessages[5] || 'None reported'}
-- **Known Allergies:** ${userMessages[6] || 'No known drug allergies reported'}
+/**
+ * Code-based Urgency Evaluation (Item 5)
+ * - 119 now
+ * - See a doctor today
+ * - Within a few days
+ * - Routine
+ * Age 65+ or under 3 with fever raises it!
+ */
+export function evaluateUrgency(data: PatientIntakeData, group?: SymptomGroup): UrgencyInfo {
+  // Rank levels: routine (0) < within_few_days (1) < see_doctor_today (2) < 119_now (3)
+  const urgencyRankMap: Record<UrgencyLevel, number> = {
+    routine: 0,
+    within_few_days: 1,
+    see_doctor_today: 2,
+    '119_now': 3
+  };
 
-*Show this card or the Japanese note to clinic reception.*`;
+  let baseUrgency: UrgencyInfo;
+
+  // 1. Any checked red flags -> 119 now
+  if (data.checkedRedFlags && data.checkedRedFlags.length > 0) {
+    baseUrgency = {
+      level: '119_now',
+      badge: {
+        en: 'Immediate 119 Call Needed',
+        ja: '直ちに119番（救急要請）',
+        hi: 'तत्काल 119 एम्बुलेंस कॉल आवश्यक'
+      },
+      description: {
+        en: 'Dangerous red flag symptoms were reported. Please call 119 for an ambulance or go to an emergency room immediately.',
+        ja: '危険な兆候（レッドフラッグ）が認められます。直ちに119番通報で救急車を呼ぶか、救急外来を受診してください。',
+        hi: 'खतरनाक लक्षण पाए गए हैं। कृपया तुरंत 119 पर एम्बुलेंस बुलाएं या नजदीकी आपातकालीन कक्ष (ER) जाएं।'
+      },
+      color: 'red'
+    };
+  } else {
+    const severity = typeof data.severity === 'number' ? data.severity : 5;
+    const isFeverGroup = data.groupId === 'g01' || data.groupId === 'g14';
+    const isInfant = data.ageGroup?.includes('under_3') || data.ageGroup?.includes('Infant') || data.ageGroup?.includes('乳幼児');
+    const isSenior = data.ageGroup?.includes('65+') || data.ageGroup?.includes('Senior') || data.ageGroup?.includes('高齢者');
+
+    // Rule: Age 65+ or under 3 with fever raises urgency to "See a doctor today"
+    if (isFeverGroup && (isInfant || isSenior)) {
+      baseUrgency = {
+        level: 'see_doctor_today',
+        badge: {
+          en: 'See a Doctor Today (High Priority)',
+          ja: '本日中に医療機関を受診（優先度高）',
+          hi: 'आज ही डॉक्टर को दिखाएं (उच्च प्राथमिकता)'
+        },
+        description: {
+          en: 'Fever in infants under 3 or seniors (65+) requires timely medical evaluation today to prevent sudden complications.',
+          ja: '乳幼児や65歳以上の高齢者の発熱は急激に重症化しやすいため、本日中の速やかな受診をお勧めします。',
+          hi: 'शिशुओं या 65 वर्ष से अधिक उम्र के बुजुर्गों में बुखार जटिलताओं से बचने के लिए आज ही डॉक्टर द्वारा देखा जाना चाहिए।'
+        },
+        color: 'amber'
+      };
+    } else if (severity >= 8 || (severity >= 6 && (data.duration?.includes('today') || data.duration?.includes('hours')))) {
+      // 2. High severity (>= 8) or severe acute onset (>= 6 with today/yesterday)
+      baseUrgency = {
+        level: 'see_doctor_today',
+        badge: {
+          en: 'See a Doctor Today',
+          ja: '本日中に医療機関を受診',
+          hi: 'आज ही डॉक्टर को दिखाएं'
+        },
+        description: {
+          en: 'Your reported discomfort is severe. Visit a clinic or hospital consultation center today during opening hours.',
+          ja: '強い症状が見られます。本日の診療時間内に医療機関を受診してください。',
+          hi: 'आपके लक्षण गंभीर हैं। कृपया आज ही क्लिनिक या अस्पताल जाएं।'
+        },
+        color: 'amber'
+      };
+    } else {
+      // 3. Routine groups
+      const routineGroups = ['g37', 'g38', 'g40', 'g27', 'g21'];
+      if (routineGroups.includes(data.groupId) && severity <= 3) {
+        baseUrgency = {
+          level: 'routine',
+          badge: {
+            en: 'Routine Clinic Visit',
+            ja: '通常・定期的な受診',
+            hi: 'नियमित क्लिनिक परामर्श'
+          },
+          description: {
+            en: 'Schedule a routine visit at your convenience during regular clinic consultation hours.',
+            ja: 'ご都合の良い日時に、通常の診療時間内に受診してください。',
+            hi: 'अपनी सुविधानुसार क्लिनिक के नियमित समय में डॉक्टर से परामर्श लें।'
+          },
+          color: 'blue'
+        };
+      } else {
+        // 4. Default: Within a few days
+        baseUrgency = {
+          level: 'within_few_days',
+          badge: {
+            en: 'See a Doctor Within a Few Days',
+            ja: '数日以内に医療機関を受診',
+            hi: 'कुछ दिनों के भीतर डॉक्टर को दिखाएं'
+          },
+          description: {
+            en: 'Your symptoms should be checked by a physician within 2 to 3 days. Seek sooner care if symptoms worsen.',
+            ja: '症状が続く場合は、2〜3日以内に医療機関を受診してください。悪化した場合は早めに受診してください。',
+            hi: 'लक्षणों की जांच 2-3 दिनों में डॉक्टर से कराएं। यदि समस्या बढ़े तो जल्द जाएं।'
+          },
+          color: 'emerald'
+        };
+      }
+    }
+  }
+
+  // Evaluate urgency of any chosen group question options
+  let maxOptionRank = 0;
+  if (data.groupQuestions) {
+    for (const gq of data.groupQuestions) {
+      for (const opt of gq.selectedOptions) {
+        if (opt.urgency === 'now') maxOptionRank = Math.max(maxOptionRank, 3);
+        else if (opt.urgency === 'today') maxOptionRank = Math.max(maxOptionRank, 2);
+        else if (opt.urgency === 'days') maxOptionRank = Math.max(maxOptionRank, 1);
+      }
+    }
+  }
+
+  // Only raise urgency, never lower
+  if (maxOptionRank > urgencyRankMap[baseUrgency.level]) {
+    if (maxOptionRank === 3) {
+      return {
+        level: '119_now',
+        badge: {
+          en: 'Immediate 119 Call Needed',
+          ja: '直ちに119番（救急要請）',
+          hi: 'तत्काल 119 एम्बुलेंस कॉल आवश्यक'
+        },
+        description: {
+          en: 'Dangerous warning signs reported in questionnaire options. Please call 119 for an ambulance or visit emergency care immediately.',
+          ja: '問診回答で危険な兆候が確認されました。直ちに119番通報で救急車を呼ぶか、救急外来を受診してください。',
+          hi: 'प्रश्नावली में गंभीर लक्षण पाए गए हैं। कृपया तुरंत 119 पर कॉल करें या आपातकालीन चिकित्सा सहायता लें।'
+        },
+        color: 'red'
+      };
+    }
+    if (maxOptionRank === 2) {
+      return {
+        level: 'see_doctor_today',
+        badge: {
+          en: 'See a Doctor Today',
+          ja: '本日中に医療機関を受診',
+          hi: 'आज ही डॉक्टर को दिखाएं'
+        },
+        description: {
+          en: 'Your reported symptoms indicate a need for medical consultation today during clinic hours.',
+          ja: '問診項目に基づき、本日の診療時間内に医療機関を受診することをお勧めします。',
+          hi: 'आपके लक्षणों के आधार पर आज ही क्लिनिक या अस्पताल में परामर्श आवश्यक है।'
+        },
+        color: 'amber'
+      };
+    }
+    if (maxOptionRank === 1) {
+      return {
+        level: 'within_few_days',
+        badge: {
+          en: 'See a Doctor Within a Few Days',
+          ja: '数日以内に医療機関を受診',
+          hi: 'कुछ दिनों के भीतर डॉक्टर को दिखाएं'
+        },
+        description: {
+          en: 'Your symptoms should be checked by a physician within 2 to 3 days. Seek sooner care if symptoms worsen.',
+          ja: '症状が続く場合は、2〜3日以内に医療機関を受診してください。悪化した場合は早めに受診してください。',
+          hi: 'लक्षणों की जांच 2-3 दिनों में डॉक्टर से कराएं। यदि समस्या बढ़े तो जल्द जाएं।'
+        },
+        color: 'emerald'
+      };
+    }
+  }
+
+  return baseUrgency;
 }
 
-function buildRuleBasedNoteJa(history: ChatTurnMessage[]): string {
-  const userMessages = history.filter((m) => m.role === 'user').map((m) => m.content);
-  return `【問診票サマリー（外国人患者）】
-■ 主訴：${userMessages[0] || '体調不良'}
-■ 発症時期：${userMessages[1] || '最近'}
-■ 重症度（1〜10）：${userMessages[2] || '中等度'}
-■ 随伴症状：${userMessages[3] || '特になし'}
-■ 患者背景：${userMessages[4] || '成人'}
-■ 服用中の薬：${userMessages[5] || '特になし'}
-■ アレルギー：${userMessages[6] || '特記事項なし'}
-■ 配慮事項：日本語が不慣れなため、英語またはやさしい日本語での診療対応をお願い申し上げます。`;
+/**
+ * Builds Trilingual Doctor Intake Notes from pre-translated templates (No-AI)
+ * Formatted exactly as required:
+ * 【問診票サマリー（外国人患者）】
+ * 主訴: ...
+ * 発症時期: ...
+ * 重症度: ...
+ * 年齢層: ...
+ * 服用中の薬: ...
+ * アレルギー・持病: ...
+ */
+export function generateDoctorNotes(data: PatientIntakeData): GeneratedDoctorNote {
+  const group = getGroupById(data.groupId);
+  const complaintJa = group ? group.name.ja : (data.chiefComplaint || '体調不良');
+  const complaintEn = group ? group.name.en : (data.chiefComplaint || 'Unspecified illness');
+  const complaintHi = group ? group.name.hi : (data.chiefComplaint || 'अस्वस्थता');
+
+  const durationJa = data.duration || '数日前から';
+  const durationEn = data.duration || 'Started a few days ago';
+  const durationHi = data.duration || 'कुछ दिन पहले से';
+
+  const severityJa = `${data.severity || 5} / 10`;
+  const severityEn = `${data.severity || 5} / 10`;
+  const severityHi = `${data.severity || 5} / 10`;
+
+  const ageData = normalizeAgeAndPregnancy(data.ageGroup, data.isPregnant);
+  const medData = normalizeMedications(data.medications);
+  const allergyData = normalizeAllergies(data.allergies);
+
+  let groupNotesJa = '';
+  let groupNotesEn = '';
+  let groupNotesHi = '';
+
+  if (data.groupQuestions && data.groupQuestions.length > 0) {
+    const jaArr: string[] = [];
+    const enArr: string[] = [];
+    const hiArr: string[] = [];
+
+    for (const gq of data.groupQuestions) {
+      if (gq.selectedOptions && gq.selectedOptions.length > 0) {
+        const jaVals = gq.selectedOptions.map((o) => o.label.ja).join('、');
+        const enVals = gq.selectedOptions.map((o) => o.label.en).join(', ');
+        const hiVals = gq.selectedOptions.map((o) => o.label.hi || o.label.en).join(', ');
+        jaArr.push(`${gq.noteLabel.ja}: ${jaVals}`);
+        enArr.push(`${gq.noteLabel.en}: ${enVals}`);
+        hiArr.push(`${gq.noteLabel.en}: ${hiVals}`);
+      }
+    }
+
+    if (jaArr.length > 0) groupNotesJa = '\n' + jaArr.join('\n');
+    if (enArr.length > 0) groupNotesEn = '\n' + enArr.join('\n');
+    if (hiArr.length > 0) groupNotesHi = '\n' + hiArr.join('\n');
+  }
+
+  const noteJa = `【問診票サマリー（外国人患者）】
+主訴: ${complaintJa}${data.chiefComplaint && data.chiefComplaint !== complaintJa ? `（患者自由記述: ${data.chiefComplaint}）` : ''}${groupNotesJa}
+発症時期: ${durationJa}
+重症度: ${severityJa}
+年齢層: ${ageData.ja}
+服用中の薬: ${medData.ja}
+アレルギー・持病: ${allergyData.ja}`;
+
+  const noteEn = `【Medical Intake Summary (International Patient)】
+Chief Complaint: ${complaintEn}${data.chiefComplaint && data.chiefComplaint !== complaintEn ? ` (Note: "${data.chiefComplaint}")` : ''}${groupNotesEn}
+Onset & Duration: ${durationEn}
+Severity Level: ${severityEn}
+Patient Profile: ${ageData.en}
+Current Medications: ${medData.en}
+Allergies & Conditions: ${allergyData.en}`;
+
+  const noteHi = `【चिकित्सा परामर्श सारांश (विदेशी मरीज)】
+मुख्य समस्या: ${complaintHi}${groupNotesHi}
+प्रारंभ: ${durationHi}
+गंभीरता: ${severityHi}
+आयु वर्ग: ${ageData.hi}
+वर्तमान दवाएं: ${medData.hi}
+एलर्जी व पुरानी बीमारियां: ${allergyData.hi}`;
+
+  return { noteJa, noteEn, noteHi };
 }
