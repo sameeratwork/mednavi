@@ -12,8 +12,11 @@ import {
   ChevronRight, 
   ShieldCheck,
   Stethoscope,
-  CheckCircle2
+  CheckCircle2,
+  Heart,
+  Bookmark
 } from 'lucide-react';
+import { useSavedClinics } from '@/lib/savedClinicsContext';
 
 export interface ClinicCardProps {
   clinic: {
@@ -38,6 +41,10 @@ export interface ClinicCardProps {
 }
 
 export default function ClinicCard({ clinic, isSelected, onSelect }: ClinicCardProps) {
+  const { isFavorite, isWantToGo, toggleSave } = useSavedClinics();
+  const fav = isFavorite(clinic.id);
+  const want = isWantToGo(clinic.id);
+
   const isHospital = clinic.type?.toLowerCase() === 'hospital';
   const specialties: string[] = Array.isArray(clinic.specialties) ? clinic.specialties : [];
   const languages: string[] = Array.isArray(clinic.languages_supported) ? clinic.languages_supported : [];
@@ -87,10 +94,46 @@ export default function ClinicCard({ clinic, isSelected, onSelect }: ClinicCardP
           )}
         </div>
 
-        {/* Booking tag */}
-        <span className="text-[11px] font-medium text-navy-600 bg-navy-100 px-2 py-0.5 rounded-md shrink-0">
-          {clinic.how_to_book || 'Walk-in Welcome'}
-        </span>
+        {/* Booking tag & Save Actions */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="text-[11px] font-medium text-navy-600 bg-navy-100 px-2 py-0.5 rounded-md shrink-0">
+            {clinic.how_to_book || 'Walk-in Welcome'}
+          </span>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleSave(clinic, 'favorite');
+            }}
+            aria-label={fav ? 'Remove from favorites' : 'Save as favorite'}
+            title={fav ? 'Favorited' : 'Save as favorite'}
+            className={`p-1.5 rounded-lg border transition cursor-pointer ${
+              fav
+                ? 'bg-red-50 border-red-300 text-red-600 shadow-2xs'
+                : 'bg-white border-navy-200 text-navy-400 hover:text-red-500 hover:border-red-200'
+            }`}
+          >
+            <Heart className={`w-3.5 h-3.5 ${fav ? 'fill-red-600' : ''}`} />
+          </button>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleSave(clinic, 'want_to_go');
+            }}
+            aria-label={want ? 'Remove from want to go' : 'Save to want to go'}
+            title={want ? 'Marked Want to Go' : 'Want to go'}
+            className={`p-1.5 rounded-lg border transition cursor-pointer ${
+              want
+                ? 'bg-brand-50 border-brand-300 text-brand-600 shadow-2xs'
+                : 'bg-white border-navy-200 text-navy-400 hover:text-brand-600 hover:border-brand-200'
+            }`}
+          >
+            <Bookmark className={`w-3.5 h-3.5 ${want ? 'fill-brand-600' : ''}`} />
+          </button>
+        </div>
       </div>
 
       {/* Clinic Name */}

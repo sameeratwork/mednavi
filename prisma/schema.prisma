@@ -93,3 +93,74 @@ model MedicalRecord {
 
   @@index([userId])
 }
+
+model UserProfile {
+  id              String          @id @default(cuid())
+  userId          String          @unique
+  language        String          @default("en") // "en" | "ja" | "hi"
+  ward            String?
+  nationality     String?        
+  insuranceType   String?         
+  saveHistory     Boolean         @default(true)
+  consentAt       DateTime        @default(now())
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([userId])
+}
+
+model SymptomNoteHistory {
+  id              String          @id @default(cuid())
+  userId          String
+  createdAt       DateTime        @default(now())
+  groupId         String
+  departmentJa    String
+  departmentEn    String
+  urgency         String
+  noteJa          String
+  noteEn          String
+  answersJson     Json
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model SavedClinic {
+  id              String          @id @default(cuid())
+  userId          String
+  clinicId        String
+  clinicName      String
+  address         String
+  ward            String?
+  departments     Json?
+  status          String          // "favorite" | "want_to_go"
+  createdAt       DateTime        @default(now())
+
+  @@unique([userId, clinicId, status])
+  @@index([userId])
+}
+
+model VisitLog {
+  id              String          @id @default(cuid())
+  userId          String
+  clinicId        String?
+  clinicName      String
+  visitedAt       DateTime
+  note            String?
+  createdAt       DateTime        @default(now())
+
+  @@index([userId])
+  @@index([visitedAt])
+}
+
+model BillHistory {
+  id              String          @id @default(cuid())
+  userId          String
+  createdAt       DateTime        @default(now())
+  kind            String          // "bill" | "medicine"
+  title           String
+  summaryJson     Json
+
+  @@index([userId])
+  @@index([createdAt])
+}

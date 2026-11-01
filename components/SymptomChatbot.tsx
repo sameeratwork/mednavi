@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import {
   MessageSquare,
   Send,
@@ -33,6 +34,7 @@ import {
   Crosshair,
   Eye,
   ShieldCheck,
+  Bookmark,
   X
 } from 'lucide-react';
 
@@ -134,6 +136,78 @@ export default function SymptomChatbot() {
   const [searchingText, setSearchingText] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Session & auto-save state
+  const { data: session, status } = useSession();
+  const [dismissGuestNotice, setDismissGuestNotice] = useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saved' | 'disabled'>('idle');
+  const autoSavedKeyRef = useRef<string | null>(null);
+
+  // Auto-save symptom note once when reaching the result step for authenticated users
+  useEffect(() => {
+    if (
+      currentStep === 9 &&
+      selectedGroup &&
+      doctorNotes &&
+      urgencyResult &&
+      status === 'authenticated'
+    ) {
+      const resultKey = `${selectedGroup.id}_${urgencyResult.level}_${doctorNotes.noteJa.slice(0, 40)}`;
+      if (autoSavedKeyRef.current === resultKey) {
+        return; // Prevent duplicate auto-save on re-renders or tab switches
+      }
+      autoSavedKeyRef.current = resultKey;
+
+      fetch('/api/me/history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          groupId: selectedGroup.id,
+          departmentJa: primaryDeptInfo?.ja || selectedGroup.primaryDept,
+          departmentEn: primaryDeptInfo?.en || selectedGroup.primaryDept,
+          urgency: urgencyResult.level,
+          noteJa: doctorNotes.noteJa,
+          noteEn: doctorNotes.noteEn,
+          answersJson: {
+            duration: duration || 'A few days ago / 数日前から',
+            severity,
+            ageGroup,
+            isPregnant,
+            medications: medications || 'None reported / 特になし',
+            allergies: allergies || 'None reported / 特になし',
+            checkedRedFlags: selectedRedFlags,
+            groupAnswers: groupQAnswers,
+          },
+        }),
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.saved === false) {
+            setAutoSaveStatus('disabled');
+          } else if (data?.success) {
+            setAutoSaveStatus('saved');
+          }
+        })
+        .catch((err) => {
+          console.warn('Auto-save symptom note failed:', err);
+        });
+    }
+  }, [
+    currentStep,
+    selectedGroup,
+    doctorNotes,
+    urgencyResult,
+    status,
+    primaryDeptInfo,
+    duration,
+    severity,
+    ageGroup,
+    isPregnant,
+    medications,
+    allergies,
+    selectedRedFlags,
+    groupQAnswers,
+  ]);
+
   // Reset all states
   const handleReset = () => {
     setCurrentStep(1);
@@ -164,6 +238,9 @@ export default function SymptomChatbot() {
     setActiveNoteTab('ja');
     setReasonLanguage('en');
     setCopied(false);
+    setDismissGuestNotice(false);
+    setAutoSaveStatus('idle');
+    autoSavedKeyRef.current = null;
   };
 
   // Text submit handler
@@ -1313,6 +1390,52 @@ export default function SymptomChatbot() {
            ─────────────────────────────────────────────────────────────────── */}
         {currentStep === 9 && selectedGroup && urgencyResult && doctorNotes && (
           <div className="space-y-6 max-w-3xl mx-auto">
+            {/* Guest Sign-In Notice */}
+            {status !== 'authenticated' && !dismissGuestNotice && (
+              <div className="bg-brand-50 border border-brand-200 rounded-2xl p-4 flex items-center justify-between gap-3 text-xs text-brand-900 shadow-2xs animate-in fade-in duration-200">
+                <div className="flex items-center gap-2.5">
+                  <Bookmark className="w-4 h-4 text-brand-600 shrink-0" />
+                  <span>
+                    Log in to save this note to your history.
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <Link
+                    href="/login?callbackUrl=/symptom-checker"
+                    className="font-bold text-white bg-brand-600 hover:bg-brand-700 px-3 py-1.5 rounded-xl shadow-2xs transition"
+                  >
+                    Log in
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setDismissGuestNotice(true)}
+                    className="p-1 text-brand-400 hover:text-brand-700 transition cursor-pointer"
+                    title="Dismiss notice"
+                    aria-label="Dismiss notice"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Authenticated Auto-Save Badge */}
+            {status === 'authenticated' && autoSaveStatus === 'saved' && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5 flex items-center justify-between text-xs text-emerald-900 shadow-2xs animate-in fade-in duration-200">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Saved automatically to your medical history.</span>
+                </div>
+                <Link
+                  href="/profile?tab=symptoms"
+                  className="font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-1 shrink-0"
+                >
+                  <span>View in Profile</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            )}
+
             {/* Top Banner: Department Match */}
             <div className="bg-linear-to-r from-blue-900 to-indigo-900 rounded-2xl p-6 shadow-md border border-slate-200 space-y-4">
               <div>
@@ -1568,15 +1691,33 @@ export default function SymptomChatbot() {
               backupDepartment={backupDeptInfo?.ja || selectedGroup.backupDept}
             />
 
-            {/* Restart Button */}
-            <div className="text-center pt-2">
+            {/* Navigation & Restart Actions */}
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4 text-xs font-medium text-slate-600">
               <button
                 onClick={handleReset}
-                className="inline-flex items-center gap-2 text-xs font-medium text-slate-600 hover:text-slate-900 transition"
+                className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 transition"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 Check another symptom or start over
               </button>
+
+              {status === 'authenticated' && (
+                <Link
+                  href="/profile?tab=symptoms"
+                  className="inline-flex items-center gap-1 text-brand-600 hover:text-brand-800 font-semibold transition"
+                >
+                  <span>Back to profile</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              )}
+
+              <Link
+                href="/visit-planner"
+                className="inline-flex items-center gap-1 text-teal-700 hover:text-teal-900 font-semibold transition"
+              >
+                <span>Visit Guide</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
           </div>
         )}
