@@ -10,8 +10,11 @@ import {
   CheckCircle2,
   AlertCircle,
   HelpCircle,
-  ArrowRight
+  ArrowRight,
+  Heart,
+  Bookmark
 } from 'lucide-react';
+import { useSavedClinics } from '@/lib/savedClinicsContext';
 import {
   TOKYO_WARDS,
   getCanonicalDepartment,
@@ -38,6 +41,7 @@ export default function MatchingClinicsList({
   department,
   backupDepartment,
 }: MatchingClinicsListProps) {
+  const { isFavorite, isWantToGo, toggleSave } = useSavedClinics();
   const [selectedWard, setSelectedWard] = useState('all');
   const [clinics, setClinics] = useState<FilteredClinic[]>([]);
   const [loading, setLoading] = useState(false);
@@ -275,13 +279,43 @@ export default function MatchingClinicsList({
                   )}
                 </div>
 
-                <Link
-                  href={`/clinics/${clinic.id}`}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition shrink-0 w-fit"
-                >
-                  <span>View Details &amp; Hours</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </Link>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => toggleSave(clinic, 'favorite')}
+                    aria-label={isFavorite(clinic.id) ? 'Remove from favorites' : 'Save as favorite'}
+                    title={isFavorite(clinic.id) ? 'Favorited' : 'Save as favorite'}
+                    className={`p-1.5 rounded-lg border transition cursor-pointer ${
+                      isFavorite(clinic.id)
+                        ? 'bg-red-50 border-red-300 text-red-600 shadow-2xs'
+                        : 'bg-white border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-200'
+                    }`}
+                  >
+                    <Heart className={`w-3.5 h-3.5 ${isFavorite(clinic.id) ? 'fill-red-600' : ''}`} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => toggleSave(clinic, 'want_to_go')}
+                    aria-label={isWantToGo(clinic.id) ? 'Remove from want to go' : 'Save to want to go'}
+                    title={isWantToGo(clinic.id) ? 'Marked Want to Go' : 'Want to go'}
+                    className={`p-1.5 rounded-lg border transition cursor-pointer ${
+                      isWantToGo(clinic.id)
+                        ? 'bg-blue-50 border-blue-300 text-blue-600 shadow-2xs'
+                        : 'bg-white border-gray-200 text-gray-400 hover:text-blue-600 hover:border-blue-200'
+                    }`}
+                  >
+                    <Bookmark className={`w-3.5 h-3.5 ${isWantToGo(clinic.id) ? 'fill-blue-600' : ''}`} />
+                  </button>
+
+                  <Link
+                    href={`/clinics/${clinic.id}`}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition shrink-0 w-fit"
+                  >
+                    <span>View Details &amp; Hours</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
               </div>
 
               {/* Address */}

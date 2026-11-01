@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import { 
   Receipt, 
   Pill, 
@@ -11,10 +13,13 @@ import {
   CheckCircle2, 
   Info,
   Clock,
-  Languages
+  Languages,
+  Bookmark,
+  Check
 } from 'lucide-react';
 
 export default function BillExplainerPage() {
+  const { data: session, status } = useSession();
   const [totalAmount, setTotalAmount] = useState<number | ''>(2850);
   const [patientPortion, setPatientPortion] = useState<number | ''>(860);
   const [billText, setBillText] = useState('初診料 288点, 処方箋料 68点, 検査料 200点 (合計 556点)');
@@ -22,6 +27,8 @@ export default function BillExplainerPage() {
 
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any | null>(null);
+  const [savingHistory, setSavingHistory] = useState(false);
+  const [savedHistory, setSavedHistory] = useState(false);
 
   // Quick Preset Samples
   const loadPreset = (type: 'cold' | 'pain' | 'hospital') => {
@@ -63,11 +70,35 @@ export default function BillExplainerPage() {
       const data = await res.json();
       if (data.success) {
         setResult(data.data);
+        setSavedHistory(false);
       }
     } catch (err) {
       console.error('Error in explain bill:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveToHistory = async () => {
+    if (!result || savingHistory || savedHistory) return;
+    setSavingHistory(true);
+    try {
+      const res = await fetch('/api/me/bill-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kind: result.medicines && result.medicines.length > 0 ? 'medicine' : 'bill',
+          title: totalAmount ? `Hospital Receipt ¥${Number(totalAmount).toLocaleString()}` : 'Prescription Medicine Breakdown',
+          summaryJson: result,
+        }),
+      });
+      if (res.ok) {
+        setSavedHistory(true);
+      }
+    } catch (err) {
+      console.error('Failed to save to history:', err);
+    } finally {
+      setSavingHistory(false);
     }
   };
 
@@ -209,6 +240,49 @@ export default function BillExplainerPage() {
           {result ? (
             <div className="space-y-6 animate-in fade-in duration-300">
               
+              {/* Save to History Action Card */}
+              <div className="p-4 bg-white rounded-2xl border border-navy-200/90 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="text-xs text-navy-700">
+                  <p className="font-semibold text-navy-900">
+                    {status === 'authenticated'
+                      ? 'Save this receipt breakdown to your profile.'
+                      : 'Log in to save this receipt explanation to your history.'}
+                  </p>
+                  <p className="text-[11px] text-navy-500">
+                    Review your medical costs and medicine equivalents any time.
+                  </p>
+                </div>
+
+                {status === 'authenticated' ? (
+                  <button
+                    type="button"
+                    onClick={handleSaveToHistory}
+                    disabled={savingHistory || savedHistory}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shadow-2xs transition disabled:opacity-60 cursor-pointer shrink-0"
+                  >
+                    {savedHistory ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-300" />
+                        <span>Saved to History</span>
+                      </>
+                    ) : (
+                      <>
+                        <Bookmark className="w-3.5 h-3.5" />
+                        <span>{savingHistory ? 'Saving...' : 'Save to My History'}</span>
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <Link
+                    href="/login?callbackUrl=/explainer"
+                    className="inline-flex items-center gap-1 px-3.5 py-2 rounded-xl bg-brand-50 hover:bg-brand-100 text-brand-700 font-semibold text-xs transition shrink-0"
+                  >
+                    <span>Log in to save</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                )}
+              </div>
+
               {/* Overview Summary */}
               <div className="bg-white rounded-3xl p-6 border border-navy-200 shadow-card space-y-3">
                 <h3 className="font-heading font-bold text-base text-navy-950 flex items-center space-x-2">
